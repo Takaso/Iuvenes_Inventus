@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Iu‑venes | Accedi</title>
+    <!-- importiamo tailwind tramite CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = { darkMode: 'class' };
+    </script>
+</head>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen">
+    <!-- contenitore principale del login item -->
+    <div class="w-full max-w-md p-8 bg-gray-800 rounded-2xl shadow-lg">
+    <!-- area del logo -->
+    <div class="flex justify-center mb-6">
+    <!-- immagine per il logo di Iu‑venes -->
+    <img src="https://via.placeholder.com/100x40?text=Logo" alt="Iu‑venes Logo" class="h-10">
+    </div>
+    <!-- titolo di benvenuto -->
+    <h1 class="text-3xl font-semibold text-center text-white mb-2">Benvenuto</h1>
+    <!-- sottotitolo esplicativo -->
+    <p class="text-center text-gray-400 mb-8">Registrati per continuare su Iu‑venes</p>
+    <!-- inizio del form di login -->
+    <form method="POST" class="space-y-6">
+    <!-- campo email -->
+    <div>
+        <label for="email" class="block text-sm font-medium text-gray-200">Email</label>
+        <input id="email" type="email" name="email" required
+        class="mt-1 block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+    <!-- campo password -->
+    <div>
+        <label for="password" class="block text-sm font-medium text-gray-200">Password</label>
+        <input id="password" type="password" name="password" required
+        class="mt-1 block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+    <!-- checkbox "Ricordami" e link "Password dimenticata" -->
+    <div class="flex items-center justify-between text-sm">
+        <label class="inline-flex items-center text-gray-300">
+        <input type="checkbox" class="h-4 w-4 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-400">
+        <span class="ml-2">Ricordarmi</span>
+        </label>
+        <a href="#" class="text-blue-400 hover:text-blue-300">Hai dimenticato la password?</a>
+    </div>
+    <!-- bottone di invio del form -->
+    <button type="submit" class="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+        Accedi
+    </button>
+    </form>
+
+    <!-- link per la registrazione di un nuovo account -->
+    <p class="mt-6 text-center text-gray-400 text-sm">
+        Non hai un account?
+    <a href="/signup" class="text-blue-400 hover:text-blue-300 font-medium">Sign up</a>
+    </p>
+    <!-- footer del copyright -->
+        <footer class="mt-8 text-center text-gray-600 text-xs">
+    © 2025 Iu‑venes. Tutti i diritti riservati.
+        </footer>
+    </div>
+</body>
+</html>

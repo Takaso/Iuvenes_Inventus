@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iu‑venes | View Database</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+    };
+    </script>
+</head>
+<body class="bg-gray-900 min-h-screen p-6 flex flex-col items-center">
+    <!-- contenitore della tabella -->
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+        <!-- intestazione della pagina -->
+        <div class="px-6 py-4 bg-gray-900 border-b border-gray-700">
+            <h1 class="text-2xl font-semibold text-white">View Database</h1>
+        </div>
+        <!-- database -->
+        <div class="p-6">
+            <table class="min-w-full table-auto text-left">
+                <thead>
+                    <tr class="bg-gray-700">
+                        <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">ID</th>
+                        <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">Email</th>
+                        <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">User Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="odd:bg-gray-800 even:bg-gray-700 hover:bg-gray-600 transition">
+                        <td class="px-4 py-2 text-gray-100">{{ user.id }}</td>
+                        <td class="px-4 py-2 text-gray-100">{{ user.email }}</td>
+                        <td class="px-4 py-2 text-gray-100">{{ user.user_type }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- link per tornare al profilo -->
+        <div class="px-6 py-4 bg-gray-900 border-t border-gray-700 text-right">
+            <a href="{{ url_for('profile') }}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                Torna indietro
+            </a>
+        </div>
+    </div>
+</body>
+</html>
