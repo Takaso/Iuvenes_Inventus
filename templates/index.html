@@ -15,10 +15,23 @@
     <header class="w-full bg-gray-800 shadow-md border-b border-gray-700">
         <div class="max-w-4xl mx-auto px-6 py-4 flex items-center space-x-8">
             <!-- link Home -->
-            <a href="index.html" class="text-white font-semibold text-lg hover:text-blue-400 transition">Home</a>
+            <a href="{{ url_for('index') }}" class="text-white font-semibold text-lg hover:text-blue-400 transition">
+                Home
+            </a>
+
             <!-- link profilo visibile se loggato -->
             {% if "user_id" in session %}
-            <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white transition">Il tuo profilo</a>
+            <a href="{{ url_for('profile') }}"
+               class="text-gray-300 hover:text-white transition flex items-center">
+                <!-- Icona utente (Heroicon user-circle) -->
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     class="h-6 w-6 mr-1"
+                     fill="currentColor"
+                     viewBox="0 0 24 24">
+                  <path d="M12 12c2.209 0 4-1.791 4-4s-1.791-4-4-4-4 1.791-4 4 1.791 4 4 4zm0 2c-2.673 0-8 1.337-8 4v2h16v-2c0-2.663-5.327-4-8-4z"/>
+                </svg>
+                Il tuo profilo
+            </a>
             {% endif %}
         </div>
     </header>
@@ -28,8 +41,14 @@
         <h1 class="text-3xl font-semibold mb-6">Benvenuto su Iu‑venes</h1>
         {% if not "user_id" in session %}
             <div class="space-y-4 text-center">
-                <a href="{{ url_for('signup') }}" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Registrati</a><br>
-                <a href="{{ url_for('login') }}" class="inline-block px-6 py-3 border border-blue-500 text-blue-400 rounded-lg hover:bg-blue-700 hover:text-white transition">Accedi</a>
+                <a href="{{ url_for('signup') }}"
+                   class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                   Registrati
+                </a><br>
+                <a href="{{ url_for('login') }}"
+                   class="inline-block px-6 py-3 border border-blue-500 text-blue-400 rounded-lg hover:bg-blue-700 hover:text-white transition">
+                   Accedi
+                </a>
             </div>
         {% endif %}
     </main>
