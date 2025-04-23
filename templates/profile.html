@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Iu-venes | Profilo{% endblock %}
+{% block content %}
+    <!-- Navigazione -->
+    <header class="w-full bg-gray-800 shadow-md border-b border-gray-700">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="{{ url_for('index') }}" class="text-white font-semibold text-lg hover:text-blue-400 transition">
+                Home
+            </a>
+            {% if 'user_id' in session %}
+            <a href="{{ url_for('profile') }}" class="flex items-center text-gray-300 hover:text-white transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.209 0 4-1.791 4-4s-1.791-4-4-4-4 1.791-4 4 1.791 4 4 4zm0 2c-2.673 0-8 1.337-8 4v2h16v-2c0-2.663-5.327-4-8-4z"/>
+                </svg>
+                Profilo
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Contenuto Profilo -->
+    <main class="flex-grow flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-md bg-gray-800 rounded-2xl shadow-lg p-8 space-y-6">
+
+            <h1 class="text-2xl font-semibold text-white text-center">Il tuo profilo</h1>
+            <p class="text-gray-200 text-center">Tipo account: <span class="font-medium text-blue-400">{{ user_type }}</span></p>
+
+            {% if profile_pic %}
+            <div class="flex justify-center">
+                <img src="{{ url_for('uploaded_file', filename=profile_pic) }}"
+                     alt="Profile Pic"
+                     class="h-24 w-24 rounded-full object-cover border-2 border-blue-400" />
+            </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                <!-- Bio -->
+                <div>
+                    <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
+                    <textarea id="bio" name="bio" rows="3"
+                              class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">{{ bio or '' }}</textarea>
+                </div>
+
+                <!-- Foto Profilo -->
+                <div>
+                    <label for="profile_pic" class="block text-sm font-medium text-gray-200 mb-1">Foto Profilo</label>
+                    <input type="file" id="profile_pic" name="profile_pic" accept="image/*"
+                           class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+
+                {% if user_type == 'Student' %}
+                <!-- CV PDF -->
+                <div>
+                    <label for="cv_file" class="block text-sm font-medium text-gray-200 mb-1">Carica CV (PDF)</label>
+                    <input type="file" id="cv_file" name="cv_file" accept="application/pdf"
+                           class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                {% endif %}
+
+                {% if user_type == 'Business' %}
+                <!-- Address & Phone -->
+                <div>
+                    <label for="address" class="block text-sm font-medium text-gray-200 mb-1">Indirizzo sede</label>
+                    <input type="text" id="address" name="address" value="{{ address }}"
+                           class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-200 mb-1">Telefono</label>
+                    <input type="text" id="phone" name="phone" value="{{ phone }}"
+                           class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                {% endif %}
+
+                <!-- Tags -->
+                <div>
+                    <label for="tags" class="block text-sm font-medium text-gray-200 mb-1">Tag (max 3)</label>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        {% for tag in all_tags %}
+                        <span class="px-2 py-1 bg-gray-700 text-gray-200 rounded">{{ tag.name }} ({{ tag.count }})</span>
+                        {% endfor %}
+                    </div>
+                    <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3"
+                           class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    Aggiorna Profilo
+                </button>
+            </form>
+
+            {% if user_type == 'Admin' %}
+            <a href="{{ url_for('view_database') }}" class="block text-center py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">Visualizza Database</a>
+            {% endif %}
+
+            <a href="{{ url_for('logout') }}" class="block text-center mt-2 py-2 border border-blue-500 rounded-lg text-blue-400 hover:bg-gray-700 transition">Esci</a>
+
+        </div>
+    </main>
+{% endblock %}

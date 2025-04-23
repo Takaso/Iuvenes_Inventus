@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+
+    <!-- HTML della notifica di errore -->
+    {% with messages = get_flashed_messages() %} <!-- Prendiamo tutti i messaggi flashati da flask !-->
+    <div id="toast-container" class="fixed inset-x-0 top-4 flex flex-col items-center space-y-2 pointer-events-none z-50">
+        {% for m in messages %}
+        <div class="toast max-w-sm w-full bg-red-600/80 text-white text-center px-4 py-2 rounded-lg shadow-2xl transform -translate-y-8 opacity-0 transition-all duration-500 ease-out">
+            {{ m }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endwith %}
+    <header>
+    </header>
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script> // Codice per la notifica (scritto in JS)
+        document.addEventListener("DOMContentLoaded", () => {
+            const toasts = document.querySelectorAll("#toast-container .toast");
+            toasts.forEach((t, i) => {
+                // Mostra
+                setTimeout(() => {
+                    t.classList.remove("-translate-y-8", "opacity-0");
+                    t.classList.add("translate-y-0", "opacity-100");
+                }, 100 * (i + 1));
+                // Nascondi dopo 3 secondi
+                setTimeout(() => {
+                    t.classList.remove("translate-y-0", "opacity-100");
+                    t.classList.add("-translate-y-8", "opacity-0");
+                }, 3100 + 100 * (i + 1));
+            });
+        });
+    </script>
+
+</body>
+</html>
