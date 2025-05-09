@@ -5,6 +5,14 @@ import bcrypt
 import os
 from datetime import timedelta
 from PIL import Image
+import json
+import smtplib
+import ssl
+from email.message import EmailMessage
+import random
+from email_validator import validate_email, EmailNotValidError
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 # Serve per le sessioni e per cookie persistenti
@@ -18,22 +26,30 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Configurazioni
+try:
+    with open("config.json", "r") as configurazioni:
+        configurazioni = json.load(configurazioni);
+except Exception as errore:
+    print("Impossibile leggere i dati di configurazione: %s" % errore)
+    exit(1);
+
 # Connessione al database
 def connct():
     try:
         return mariadb.connect(
-            host="127.0.0.1",
-            user="root",
-            password="",
-            database="user_auth"
+            host=configurazioni['sql_host'],
+            user=configurazioni['sql_user'],
+            password=configurazioni['sql_password'],
+            database=configurazioni['sql_database']
         )
     except mariadb.Error as e:
-        print(f"Database connection failed: {e}")
+        print("Errore, connessione al database fallita: %s" % e)
         return None
 
 # Genera hash password
 def generate_password_hash(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 # Controlla estensione file
 def allowed_file(filename):
@@ -51,19 +67,19 @@ def get_or_create_tag(name):
 
 @app.route("/", methods=["GET"])
 def index():
-    q = request.args.get('q', '').strip().lower()
-    user_id = session.get('user_id')
-    user_type = session.get('user_type')
+    q = request.args.get("q", "").strip().lower()
+    user_id = session.get("user_id")
+    user_type = session.get("user_type")
 
     cur = g.db.cursor(dictionary=True)
 
     # Scegliamo quali colonne prendere in base al tipo
     if user_id:
-        if user_type == 'Student':
+        if user_type == "Student":
             cur.execute("SELECT id, email, user_type, address, phone FROM users WHERE user_type='Business'")
-        elif user_type == 'Business':
+        elif user_type == "Business":
             cur.execute("SELECT id, email, user_type, cv_file FROM users WHERE user_type='Student'")
-        elif user_type == 'Admin':
+        elif user_type == "Admin":
             # Admin vede TUTTI
             cur.execute("""
                 SELECT id, email, user_type, address, phone, cv_file
@@ -96,7 +112,7 @@ def index():
         users_with_scores.append((u, score))
 
     users_with_scores.sort(key=lambda x: x[1], reverse=True)
-    return render_template('index.html', users_with_scores=users_with_scores)
+    return render_template("index.html", users_with_scores=users_with_scores)
 
 
 # Registrazione
@@ -137,10 +153,10 @@ def login():
                 cur = conn.cursor()
                 cur.execute("SELECT id, password, user_type, profile_pic, bio FROM users WHERE email = ?", (email,))
                 user = cur.fetchone()
-                if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
+                if user and bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
                     session.permanent = bool(remember)
-                    session["user_id"] = user[0]
-                    session["user_type"] = user[2]
+                    session['user_id'] = user[0]
+                    session['user_type'] = user[2]
                     return redirect(url_for("profile"))
                 else:
                     flash("Email o password sbagliati")
@@ -326,6 +342,143 @@ def view_database():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+def email_sender(email: str) -> str:
+    # Genera il codice a 6 cifre
+    code = "".join(str(random.randint(0, 9)) for _ in range(6))
+
+    # Prepara il messaggio
+    msg = EmailMessage()
+    msg["Subject"] = "Aggiorna password - Iu-ventus"
+    msg["From"] = configurazioni['smtp_user']
+    msg["To"] = email
+
+    # Contenuto testuale se non carica l'HTML
+    text = f"""\
+Il tuo codice di verifica per Iu-ventus è: {code}
+
+Se non vedi questa email, controlla la cartella Spam.
+"""
+    msg.set_content(text)
+
+    # Contenuto HTML
+    html = f"""\
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Aggiorna password | Iu-ventus</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background-color:#ffffff; margin: 20px auto; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+      <tr>
+        <td style="background-color:#1e40af; padding:20px; text-align:center;">
+          <h1 style="color:#ffffff; margin:0; font-size:24px;">Iu-ventus</h1>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:30px; color:#333333;">
+          <p style="font-size:16px; margin-top:0;">Ciao,</p>
+          <p style="font-size:16px;">
+            Ecco il tuo <strong>codice di verifica</strong> per aggiornare la password:
+          </p>
+          <div style="text-align:center; margin:30px 0;">
+            <span style="display:inline-block; padding:15px 25px; font-size:20px; letter-spacing:4px; background-color:#1e40af; color:#ffffff; border-radius:6px;">
+              {code}
+            </span>
+          </div>
+          <p style="font-size:14px; color:#555555;">
+            Se non vedi questa email nella posta in arrivo, controlla la cartella “Spam” o “Posta indesiderata”.
+          </p>
+          <p style="font-size:14px; color:#555555; margin-bottom:0;">
+            Se non hai richiesto questo codice, ignora pure questa email.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color:#f4f4f4; text-align:center; padding:20px; font-size:12px; color:#888888;">
+          © {datetime.now().year} Iu-ventus. Tutti i diritti riservati.
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+    msg.add_alternative(html, subtype="html")
+
+    # Invia
+    context = ssl.create_default_context()
+    server = None
+    try:
+        server = smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port'])
+        server.ehlo()
+        server.starttls(context=context)
+        server.ehlo()
+        server.login(configurazioni['smtp_user'], configurazioni['smtp_password'])
+        server.send_message(msg)
+    except Exception as e:
+        print(f"Errore durante l'invio dell'email: {e}")
+    finally:
+        if server:
+            server.quit()
+
+    return code
+
+@app.route("/forgot", methods=["GET", "POST"])
+def forgot():
+    if "user_id" in session:
+        flash("Sei già registrato, non è necessario cambiare password")
+        return redirect(url_for("index"))
+
+    # Stato della procedura: se il codice è già stato inviato
+    code_sent = session.get("code_sent", False)
+    # Email corrente (dal form o da sessione, se già inviata)
+    email = request.form.get("email") or session.get("forgot_email")
+
+    if request.method == "POST":
+        # --- 1) Reinvia codice se richiesto
+        if request.args.get("resend") and code_sent:
+            now = time.time()
+            if now - session.get("sent_time", 0) < 60:
+                flash("Devi attendere qualche secondo prima di reinviare il codice")
+                return redirect(url_for("forgot"))
+            # Reinvia
+            code = email_sender(email)
+            session['sent_time'] = now
+            flash("Codice reinviato con successo")
+            return redirect(url_for("forgot"))
+
+        # --- 2) Prima fase: invio email con codice
+        if not code_sent:
+            try:
+                validate_email(email, check_deliverability=True)
+                code = email_sender(email)
+                session['code']         = code
+                session['code_sent']    = True
+                session['forgot_email'] = email
+                session['sent_time']    = time.time()
+                flash("Codice di verifica inviato all'indirizzo indicato")
+                return redirect(url_for("forgot"))
+            except EmailNotValidError as e:
+                flash(f"Email invalida: {e}")
+
+        # --- 3) Seconda fase: verifica del codice inserito
+        else:
+            user_code = request.form.get("code", "")
+            if user_code == session.get("code"):
+                # Codice corretto: reindirizza al reset della password
+                session.pop("code_sent", None)
+                return redirect(url_for("reset_password"))
+            else:
+                flash("Codice errato. Riprova o cambia email.")
+
+    return render_template("forgot.html", code_sent=code_sent, email=email)
+
+
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_password():
+    return render_template("reset_password.html");
+
 
 if __name__ == "__main__":
     app.run(debug=True)
