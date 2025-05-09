@@ -1,0 +1,6 @@
+flask>=2.0.0
+werkzeug>=2.0.0
+mariadb>=1.1.0
+bcrypt>=3.2.0
+pillow>=9.0.0
+email-validator

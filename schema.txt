@@ -1,0 +1,15 @@
+cloudflared.exe tunnel --url http://localhost:5000
+
+           +-----------------------+        +-----------------+     +----------------------+
+           |        users          |        |    user_tags    |     |        tags          |
+           +-----------------------+        +-----------------+     +----------------------+
+           | id (PK)               |<-----> | user_id (PK,FK) |     | id (PK)              |
+           | email                 |        | tag_id  (PK,FK) |<----| name (UNI)           |
+           | password              |        +-----------------+     +----------------------+
+           | user_type             |
+           | profile_pic           |
+           | bio                   |
+           | cv_file               |
+           | address               |
+           | phone                 |
+           +-----------------------+

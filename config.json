@@ -1,0 +1,10 @@
+{
+    "smtp_server": "smtp.mailersend.net",
+    "smtp_user": "MS_2XztSi@test-51ndgwvv2ydlzqx8.mlsender.net",
+    "smtp_password": "mssp.3toPOVm.ynrw7gywm5242k8e.AP7tDMM",
+    "smtp_port": 587,
+    "sql_host": "127.0.0.1",
+    "sql_user": "root",
+    "sql_password": "",
+    "sql_database": "user_auth"
+}
