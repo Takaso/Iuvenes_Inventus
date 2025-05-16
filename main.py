@@ -149,52 +149,69 @@ def get_or_create_tag(name):
 
 @app.route("/", methods=["GET"])
 def index():
-    q = request.args.get("q", "").strip().lower()
-    user_id = session.get("user_id")
-    user_type = session.get("user_type")
+    try:
+        q = request.args.get("q", "").strip().lower()
+        user_id = session.get("user_id")
+        user_type = session.get("user_type")
+        
+        cur = g.db.cursor(dictionary=True)
 
-    cur = g.db.cursor(dictionary=True)
-
-    # scegliamo quali colonne prendere in base al tipo
-    if user_id:
-        if user_type == "Student":
-            cur.execute("SELECT id, email, user_type, address, phone, Username FROM users WHERE user_type='Business'")
-        elif user_type == "Business":
-            cur.execute("SELECT id, email, user_type, cv_file, Username FROM users WHERE user_type='Student'")
-        elif user_type == "Admin":
-            cur.execute("""
-                SELECT id, email, user_type, address, phone, cv_file, Username
-                FROM users
-            """)
+        # scegliamo quali colonne prendere in base al tipo
+        if user_id:
+            if user_type == "Student":
+                cur.execute("""
+                    SELECT id, email, user_type, address, phone, Username, bio, profile_pic
+                    FROM users
+                    WHERE user_type='Business'
+                """)
+            elif user_type == "Business":
+                cur.execute("""
+                    SELECT id, email, user_type, cv_file, Username, bio, profile_pic
+                    FROM users
+                    WHERE user_type='Student'
+                """)
+            elif user_type == "Admin":
+                cur.execute("""
+                    SELECT id, email, user_type, address, phone, cv_file, Username, bio, profile_pic
+                    FROM users
+                """)
+            else:
+                cur.execute("""
+                    SELECT id, email, user_type, bio, profile_pic
+                    FROM users
+                """)
         else:
-            cur.execute("SELECT id, email, user_type FROM users")
-    else:
-        # guest
-        cur.execute("SELECT id, email, user_type FROM users")
+                cur.execute("""
+                    SELECT id, email, user_type, bio, profile_pic
+                    FROM users
+                """)
 
-    users = cur.fetchall()
-    users_with_scores = []
+        users = cur.fetchall()
+        users_with_scores = []
 
-    for u in users:
-        uid = u['id']
-        # prendi i tag
-        cur.execute(
-            "SELECT t.name FROM tags t JOIN user_tags ut ON ut.tag_id = t.id WHERE ut.user_id = ?",
-            (uid,)
-        )
-        tags = [r['name'] for r in cur.fetchall()]
+        for u in users:
+            uid = u.get('id', 0)
+            email = u.get('email', '')
+            username = u.get('Username', '')
+            cur.execute(
+                "SELECT t.name FROM tags t JOIN user_tags ut ON ut.tag_id = t.id WHERE ut.user_id = ?",
+                (uid,)
+            )
+            tags = [r['name'] for r in cur.fetchall()]
 
-        # calcola score
-        score = 0
-        if q:
-            score = sum(1 for t in tags if q in t.lower())
+            # calcola score
+            score = 0
+            if q:
+                score = sum(1 for t in tags if q in t.lower())
 
-        u['tags'] = tags
-        users_with_scores.append((u, score))
+            u['tags'] = tags
+            users_with_scores.append((u, score))
 
-    users_with_scores.sort(key=lambda x: x[1], reverse=True)
-    return render_template("index.html", users_with_scores=users_with_scores)
-
+        users_with_scores.sort(key=lambda x: x[1], reverse=True)
+        return render_template("index.html", users_with_scores=users_with_scores)
+    except Exception as e:
+        flash(f"Error loading data: {str(e)}", "error")
+        return redirect(url_for('signup'))
 
 # Registrazione
 @app.route("/signup", methods=["GET", "POST"])
@@ -302,10 +319,10 @@ def profile():
             # Aggiornamento dati base
             if pic_filename:
                 cur.execute("UPDATE users SET bio=?, profile_pic=?, Username=? WHERE id=?",
-                           (bio, pic_filename, username_input, user_id))
+                        (bio, pic_filename, username_input, user_id))
             else:
                 cur.execute("UPDATE users SET bio=?, Username=? WHERE id=?",
-                           (bio, username_input, user_id))
+                        (bio, username_input, user_id))
 
             # Gestione tipologia utente
             if user_type == "Student":
@@ -369,7 +386,7 @@ def profile():
                                         error_occurred = True
                                     else:
                                         cur.execute("UPDATE users SET email = ? WHERE id = ?", 
-                                                   (new_email, user_id))
+                                            (new_email, user_id))
                                         flash("Email aggiornata con successo", "success")
                             except EmailNotValidError as e:
                                 flash(f"Email non valida: {str(e)}", "error")
@@ -383,7 +400,7 @@ def profile():
                             else:
                                 new_hash = generate_password_hash(new_password)
                                 cur.execute("UPDATE users SET password = ? WHERE id = ?", 
-                                           (new_hash, user_id))
+                                    (new_hash, user_id))
                                 flash("Password aggiornata con successo", "success")
 
             # Commit finale solo se nessun errore
