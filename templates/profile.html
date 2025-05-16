@@ -1,109 +1,185 @@
 {% extends "base.html" %}
 {% block title %}Iu-ventus | Profilo{% endblock %}
 {% block content %}
-    <!-- Contenuto Profilo -->
-    <main class="flex-grow flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-md bg-gray-800 rounded-2xl shadow-lg p-8 space-y-6">
-
-            <h1 class="text-2xl font-semibold text-white text-center">Il tuo profilo</h1>
-            <p class="text-gray-200 text-center">Tipo account: <span class="font-medium text-blue-400">{{ user_type }}</span></p>
-
+    <main class="flex-grow flex items-center justify-center px-6 py-12 bg-gray-900">
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-4 gap-8">
+        <!-- Sidebar / Profile Summary -->
+        <aside class="col-span-1 bg-gray-800 rounded-2xl shadow-xl p-6 space-y-6">
+        <!-- Profile Icon -->
+        <div class="flex justify-center">
             {% if profile_pic %}
-            <div class="flex justify-center">
-                <img src="{{ url_for('uploaded_file', filename=profile_pic) }}"
-                    alt="Profile Pic"
-                    class="h-24 w-24 rounded-full object-cover border-2 border-blue-400" />
+            <img src="{{ url_for('uploaded_file', filename=profile_pic) }}" alt="Profile Pic"
+                class="h-32 w-32 rounded-full object-cover border-4 border-blue-500" />
+            {% else %}
+            <div class="h-32 w-32 rounded-full bg-gray-700 border-4 border-blue-500 flex items-center justify-center">
+            <span class="text-4xl text-gray-400">{{ username and username[0].upper() or '?' }}</span>
             </div>
             {% endif %}
-
-            <form method="POST" enctype="multipart/form-data" class="space-y-4" id="profile-form">
-                <!-- Username -->
-                <div>
-                    <label for="username" class="block text-sm font-medium text-gray-200 mb-1">Username</label>
-                    <input type="text" id="username" name="username" value="{{ username or '' }}"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-                <!-- Bio -->
-                <div>
-                    <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
-                    <textarea id="bio" name="bio" rows="3"
-                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">{{ bio or '' }}</textarea>
-                </div>
-
-                <!-- Foto Profilo -->
-                <div>
-                    <label for="profile_pic" class="block text-sm font-medium text-gray-200 mb-1">Foto Profilo</label>
-                    <input type="file" id="profile_pic" name="profile_pic" accept="image/*"
-                        class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-
-                {% if user_type == 'Student' %}
-                <!-- CV PDF -->
-                <div>
-                    <label for="cv_file" class="block text-sm font-medium text-gray-200 mb-1">Carica CV (PDF)</label>
-                    <input type="file" id="cv_file" name="cv_file" accept="application/pdf"
-                        class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-                {% endif %}
-
+        </div>
+        <!-- Username -->
+        <div class="text-center">
+            <h2 class="text-2xl font-bold text-white truncate" title="{{ username }}">
+            {{ username if username else 'Nessun username' }}
+            </h2>
+            <p class="text-gray-400 text-sm mt-1 truncate" title="{{ email }}">{{ email }}</p>
+        </div>
+        <!-- Account Type -->
+        <div class="text-center">
+            <span class="inline-block px-4 py-1 bg-blue-500 text-white rounded-full text-xs font-medium">
+            {{ user_type }}
+            </span>
+        </div>
+        <!-- Bio -->
+        <div class="bg-gray-700 rounded-lg p-4 text-left max-h-40 overflow-y-auto">
+            <h3 class="text-gray-200 font-semibold mb-2">Bio</h3>
+            <p class="text-gray-300 text-sm {{ not bio and 'italic text-gray-500' or '' }}">
+            {{ bio or 'Nessuna bio impostata' }}
+            </p>
+        </div>
+        <!-- Informazioni -->
+        <div class="bg-gray-700 rounded-lg p-4 text-left">
+            <h3 class="text-gray-200 font-semibold mb-2">Informazioni</h3>
+            <ul class="text-gray-300 text-sm space-y-2">
+                <li class="truncate" title="{{ email }}">
+                    <span class="font-medium text-gray-100">Email:</span> {{ email }}
+                </li>
                 {% if user_type == 'Business' %}
-                <!-- Address & Phone -->
-                <div>
-                    <label for="address" class="block text-sm font-medium text-gray-200 mb-1">Indirizzo sede</label>
-                    <input type="text" id="address" name="address" value="{{ address }}"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-                <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-200 mb-1">Telefono</label>
-                    <input type="text" id="phone" name="phone" value="{{ phone }}"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
+                <li class="truncate" title="{{ address }}">
+                    <span class="font-medium text-gray-100">Indirizzo:</span> {{ address or 'Non impostato' }}
+                </li>
+                <li>
+                    <span class="font-medium text-gray-100">Telefono:</span> {{ phone or 'Non impostato' }}
+                </li>
+                {% elif user_type == 'Student' %}
+                <li>
+                    <span class="font-medium text-gray-100">CV:</span>
+                    {% if cv_file %}
+                    <a href="{{ url_for('uploaded_file', filename=cv_file) }}" 
+                       class="text-blue-400 hover:underline truncate block">
+                        Scarica CV
+                    </a>
+                    {% else %}
+                    <span class="text-gray-500">Non caricato</span>
+                    {% endif %}
+                </li>
                 {% endif %}
-
-                <!-- Existing Tags -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-200 mb-1">Tag aggiunti</label>
-                    <div id="existing-tags" class="flex flex-wrap gap-2 mb-2">
-                        {% for tag in user_tags %}
-                        <span class="px-2 py-1 bg-gray-700 text-gray-200 rounded inline-flex items-center">
-                            {{ tag }}
-                            <button type="button" data-tag="{{ tag }}" class="ml-2 text-gray-400 hover:text-white remove-tag-btn">&times;</button>
-                        </span>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Tags Input -->
-                <div>
-                    <label for="tags" class="block text-sm font-medium text-gray-200 mb-1">Tag (max 3)</label>
-                    <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3" value="{{ user_tags|join(', ') }}"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
-
-                <button type="submit" class="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-                    Aggiorna Profilo
-                </button>
-            </form>
-
-            {% if user_type == 'Admin' %}
-            <a href="{{ url_for('view_database') }}" class="block text-center py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">Visualizza Database</a>
+            </ul>
+        </div>
+        <!-- Tags -->
+        <div class="bg-gray-700 rounded-lg p-4 text-left">
+            <h3 class="text-gray-200 font-semibold mb-2">Tag</h3>
+            {% if user_tags %}
+            <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            {% for tag in user_tags %}
+            <span class="px-2 py-1 bg-blue-500 text-white rounded-full text-xs truncate max-w-[120px]" title="{{ tag }}">
+                {{ tag }}
+            </span>
+            {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 italic text-sm">Nessun tag aggiunto</p>
             {% endif %}
         </div>
+        </aside>
+
+        <!-- Edit Form -->
+        <section class="col-span-2 md:col-span-3 bg-gray-800 rounded-2xl shadow-xl p-8">
+        <h1 class="text-3xl font-semibold text-white mb-6">Modifica Profilo</h1>
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Username Input -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-200 mb-1">Username</label>
+                <input type="text" id="username" name="username" value="{{ username }}"
+                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
+            </div>
+            <!-- Email Update -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-200 mb-1">Nuova Email</label>
+                <input type="email" id="email" name="email" placeholder="nuova@email.com"
+                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            </div>
+
+            <!-- Password Change -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-gray-200 mb-1">Password Attuale</label>
+                    <input type="password" id="current_password" name="current_password"
+                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                    <label for="new_password" class="block text-sm font-medium text-gray-200 mb-1">Nuova Password</label>
+                    <input type="password" id="new_password" name="new_password"
+                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                </div>
+            </div>
+
+            <!-- Bio Input -->
+            <div>
+            <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
+            <textarea id="bio" name="bio" rows="4"
+                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 max-h-40 overflow-y-auto">{{ bio }}</textarea>
+            </div>
+
+            <!-- File and Contact Inputs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="profile_pic" class="block text-sm font-medium text-gray-200 mb-1">Foto Profilo</label>
+                <input type="file" id="profile_pic" name="profile_pic" accept="image/*"
+                    class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 truncate" />
+            </div>
+            {% if user_type == 'Student' %}
+            <div>
+                <label for="cv_file" class="block text-sm font-medium text-gray-200 mb-1">Carica CV (PDF)</label>
+                <input type="file" id="cv_file" name="cv_file" accept="application/pdf"
+                    class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 truncate" />
+            </div>
+            {% endif %}
+            {% if user_type == 'Business' %}
+            <div>
+                <label for="address" class="block text-sm font-medium text-gray-200 mb-1">Indirizzo Sede</label>
+                <input type="text" id="address" name="address" value="{{ address }}"
+                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
+            </div>
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-200 mb-1">Telefono</label>
+                <input type="text" id="phone" name="phone" value="{{ phone }}"
+                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            {% endif %}
+            </div>
+
+            <!-- Tags Input -->
+            <div>
+            <label class="block text-sm font-medium text-gray-200 mb-2">Tag (max 3)</label>
+            <div id="existing-tags" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
+                {% for tag in user_tags %}<span class="flex items-center space-x-1 bg-blue-500 text-white rounded-full px-3 py-1 text-sm max-w-[160px] truncate">
+                <span>{{ tag }}</span>
+                <button type="button" data-tag="{{ tag }}" class="remove-tag-btn text-white hover:opacity-75 focus:outline-none">&times;</button>
+                </span>{% endfor %}
+            </div>
+            <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3" value="{{ user_tags|join(', ') }}"
+                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition">Aggiorna Profilo</button>
+        </form>
+        </section>
+    </div>
     </main>
 
     <script>
-    // Rimuove tag dall'input quando si clicca la X
     document.addEventListener('DOMContentLoaded', () => {
         const tagsInput = document.getElementById('tags');
         document.querySelectorAll('.remove-tag-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tag = btn.getAttribute('data-tag');
-                // Rimuovi lo span
-                btn.parentElement.remove();
-                // Aggiorna l'input
-                let tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t && t !== tag);
-                tagsInput.value = tags.join(', ');
-            });
+        btn.addEventListener('click', () => {
+            const tag = btn.getAttribute('data-tag');
+            btn.parentElement.remove();
+            let tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t && t !== tag);
+            tagsInput.value = tags.join(', ');
+        });
         });
     });
     </script>
