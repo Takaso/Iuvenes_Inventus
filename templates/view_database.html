@@ -42,8 +42,16 @@
                     <tbody>
                         {% for user in users %}
                         <tr class="odd:bg-gray-800 even:bg-gray-700 hover:bg-gray-600 transition">
-                            <td class="px-4 py-2 text-gray-100">{{ user.id }}</td>
-                            <td class="px-4 py-2 text-gray-100">{{ user.email }}</td>
+                            <td class="px-4 py-2 text-gray-100">
+                                <a href="{{ url_for('view_user', user_id=user.id) }}" class="hover:underline text-white">
+                                    {{ user.id }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-2 text-gray-100">
+                                <a href="{{ url_for('view_user', user_id=user.id) }}" class="hover:underline text-white">
+                                    {{ user.email }}
+                                </a>
+                            </td>
                             <td class="px-4 py-2 text-gray-100">{{ user.user_type }}</td>
                         </tr>
                         {% endfor %}
