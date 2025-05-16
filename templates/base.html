@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -10,6 +9,18 @@
     <script>
         tailwind.config = { darkMode: 'class' };
     </script>
+    <style>
+        body::-webkit-scrollbar {
+            width: 12px;
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: grey;
+            border-radius: 10px;
+        }
+        body::-webkit-scrollbar-track {
+            background-color: black;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
     {%- with messages = get_flashed_messages(with_categories=true) %}
@@ -82,7 +93,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <script> 
+    <script>
         document.addEventListener("DOMContentLoaded", () => {
             const toasts = document.querySelectorAll("#toast-container .toast");
             toasts.forEach((t, i) => {
