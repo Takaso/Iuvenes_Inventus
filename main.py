@@ -160,11 +160,10 @@ def index():
         if user_type == "Student":
             cur.execute("SELECT id, email, user_type, address, phone, Username FROM users WHERE user_type='Business'")
         elif user_type == "Business":
-            cur.execute("SELECT id, email, user_type, cv_file FROM users WHERE user_type='Student'")
+            cur.execute("SELECT id, email, user_type, cv_file, Username FROM users WHERE user_type='Student'")
         elif user_type == "Admin":
-            # admin vede TUTTI
             cur.execute("""
-                SELECT id, email, user_type, address, phone, cv_file
+                SELECT id, email, user_type, address, phone, cv_file, Username
                 FROM users
             """)
         else:
@@ -376,7 +375,7 @@ def view_user(user_id):
 
     # Carichiamo i dati di base dell’utente
     cur.execute("""
-        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone
+        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone, Username
         FROM users
         WHERE id = ?
     """, (user_id,))
@@ -393,7 +392,8 @@ def view_user(user_id):
         "bio": row[4],
         "cv_file": row[5],
         "address": row[6],
-        "phone": row[7]
+        "phone": row[7],
+        "Username": row[8]
     }
 
     # Recuperiamo i tag associati a questo utente
