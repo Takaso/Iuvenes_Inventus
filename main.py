@@ -47,6 +47,88 @@ def connct():
         print("Errore, connessione al database fallita: %s" % e)
         return None
 
+# Invio di codice per email
+
+def email_sender(email: str, soggetto: str="Iu-ventus | Codice verifica") -> str:
+    # Genera il codice a 6 cifre
+    code = "".join(str(random.randint(0, 9)) for _ in range(6))
+
+    # Prepara il messaggio
+    msg = EmailMessage()
+    msg["Subject"] = soggetto
+    msg["From"] = configurazioni['smtp_user']
+    msg["To"] = email
+
+    # Contenuto testuale se non carica l'HTML
+    text = f"""\
+Il tuo codice di verifica per Iu-ventus è: {code}
+
+Se non vedi questa email, controlla la cartella Spam.
+"""
+    msg.set_content(text)
+
+    # Contenuto HTML
+    html = f"""\
+<!DOCTYPE html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Iu-ventus</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
+        <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background-color:#ffffff; margin: 20px auto; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr>
+            <td style="background-color:#1e40af; padding:20px; text-align:center;">
+            <h1 style="color:#ffffff; margin:0; font-size:24px;">Iu-ventus</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:30px; color:#333333;">
+            <p style="font-size:16px; margin-top:0;">Ciao,</p>
+            <p style="font-size:16px;">
+                Ecco il tuo <strong>codice di verifica</strong>:
+            </p>
+            <div style="text-align:center; margin:30px 0;">
+                <span style="display:inline-block; padding:15px 25px; font-size:20px; letter-spacing:4px; background-color:#1e40af; color:#ffffff; border-radius:6px;">
+                {code}
+                </span>
+            </div>
+            <p style="font-size:14px; color:#555555;">
+                Se non vedi questa email nella posta in arrivo, controlla la cartella “Spam” o “Posta indesiderata”.
+            </p>
+            <p style="font-size:14px; color:#555555; margin-bottom:0;">
+                Se non hai richiesto questo codice, ignora pure questa email.
+            </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color:#f4f4f4; text-align:center; padding:20px; font-size:12px; color:#888888;">
+            © {datetime.now().year} Iu-ventus. Tutti i diritti riservati.
+            </td>
+        </tr>
+        </table>
+    </body>
+</html>
+"""
+    msg.add_alternative(html, subtype="html")
+
+    # Invia
+    context = ssl.create_default_context()
+    server = None
+    try:
+        server = smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port'])
+        server.ehlo()
+        server.starttls(context=context)
+        server.ehlo()
+        server.login(configurazioni['smtp_user'], configurazioni['smtp_password'])
+        server.send_message(msg)
+    except Exception as e:
+        print(f"Errore durante l'invio dell'email: {e}")
+    finally:
+        if server:
+            server.quit()
+    return code
+
 # Genera hash password
 def generate_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -73,14 +155,14 @@ def index():
 
     cur = g.db.cursor(dictionary=True)
 
-    # Scegliamo quali colonne prendere in base al tipo
+    # scegliamo quali colonne prendere in base al tipo
     if user_id:
         if user_type == "Student":
             cur.execute("SELECT id, email, user_type, address, phone FROM users WHERE user_type='Business'")
         elif user_type == "Business":
             cur.execute("SELECT id, email, user_type, cv_file FROM users WHERE user_type='Student'")
         elif user_type == "Admin":
-            # Admin vede TUTTI
+            # admin vede TUTTI
             cur.execute("""
                 SELECT id, email, user_type, address, phone, cv_file
                 FROM users
@@ -119,24 +201,29 @@ def index():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
-        user_type = request.form.get("user_type", "Student")
-        hashed_password = generate_password_hash(password)
-        conn = connct()
-        if conn:
-            try:
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)",
-                    (email, hashed_password, user_type)
-                )
-                conn.commit()
-                return redirect(url_for("login"))
-            except mariadb.Error as e:
-                flash(f"Errore: {e}")
-            finally:
-                cur.close(); conn.close()
+        try:
+            email = request.form["email"]
+            validate_email(email, check_deliverability=True)
+            password = request.form["password"]
+            user_type = request.form.get("user_type", "Student")
+            hashed_password = generate_password_hash(password)
+            conn = connct()
+            if conn:
+                try:
+                    cur = conn.cursor()
+                    cur.execute(
+                        "INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)",
+                        (email, hashed_password, user_type)
+                    )
+                    conn.commit()
+                    flash("Account creato con successo!", "success");
+                    return redirect(url_for("login"))
+                except mariadb.Error as e:
+                    flash(f"Errore: {e}", "error")
+                finally:
+                    cur.close(); conn.close()
+        except EmailNotValidError as e:
+            flash(f"Email invalida: {e}", "error")
     return render_template("signup.html")
 
 # Login con "ricordami"
@@ -146,7 +233,6 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
         remember = request.form.get("remember")
-
         conn = connct()
         if conn:
             try:
@@ -159,7 +245,7 @@ def login():
                     session['user_type'] = user[2]
                     return redirect(url_for("profile"))
                 else:
-                    flash("Email o password sbagliati")
+                    flash("Email o password sbagliati", "error")
             finally:
                 cur.close(); conn.close()
     return render_template("login.html")
@@ -175,7 +261,7 @@ def before_request():
     # apre connessione e la mette in g.db
     g.db = connct()
     if not g.db:
-        flash("Connessione al database fallita")
+        flash("Connessione al database fallita", "error")
         return redirect(url_for("login"))
 
 @app.teardown_request
@@ -234,7 +320,7 @@ def profile():
                 cur.execute("INSERT INTO user_tags (user_id, tag_id) VALUES (?,?)", (user_id, tid))
 
         g.db.commit()
-        flash("Profilo aggiornato con successo")
+        flash("Profilo aggiornato con successo", "success")
         return redirect(url_for("profile"))
 
     # GET: recupera dati esistenti
@@ -289,7 +375,7 @@ def view_user(user_id):
     """, (user_id,))
     row = cur.fetchone()
     if not row:
-        flash("Utente non trovato")
+        flash("Utente non trovato", "error")
         return redirect(url_for("index"))
 
     user = {
@@ -327,7 +413,7 @@ def view_database():
 
     db = connct()
     if not db:
-        flash("Connessione al database fallita")
+        flash("Connessione al database fallita", "error")
         return redirect(url_for("profile"))
 
     cur = db.cursor()
@@ -343,92 +429,18 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-def email_sender(email: str) -> str:
-    # Genera il codice a 6 cifre
-    code = "".join(str(random.randint(0, 9)) for _ in range(6))
-
-    # Prepara il messaggio
-    msg = EmailMessage()
-    msg["Subject"] = "Aggiorna password - Iu-ventus"
-    msg["From"] = configurazioni['smtp_user']
-    msg["To"] = email
-
-    # Contenuto testuale se non carica l'HTML
-    text = f"""\
-Il tuo codice di verifica per Iu-ventus è: {code}
-
-Se non vedi questa email, controlla la cartella Spam.
-"""
-    msg.set_content(text)
-
-    # Contenuto HTML
-    html = f"""\
-<!DOCTYPE html>
-<html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Aggiorna password | Iu-ventus</title>
-  </head>
-  <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
-    <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background-color:#ffffff; margin: 20px auto; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-      <tr>
-        <td style="background-color:#1e40af; padding:20px; text-align:center;">
-          <h1 style="color:#ffffff; margin:0; font-size:24px;">Iu-ventus</h1>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:30px; color:#333333;">
-          <p style="font-size:16px; margin-top:0;">Ciao,</p>
-          <p style="font-size:16px;">
-            Ecco il tuo <strong>codice di verifica</strong> per aggiornare la password:
-          </p>
-          <div style="text-align:center; margin:30px 0;">
-            <span style="display:inline-block; padding:15px 25px; font-size:20px; letter-spacing:4px; background-color:#1e40af; color:#ffffff; border-radius:6px;">
-              {code}
-            </span>
-          </div>
-          <p style="font-size:14px; color:#555555;">
-            Se non vedi questa email nella posta in arrivo, controlla la cartella “Spam” o “Posta indesiderata”.
-          </p>
-          <p style="font-size:14px; color:#555555; margin-bottom:0;">
-            Se non hai richiesto questo codice, ignora pure questa email.
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="background-color:#f4f4f4; text-align:center; padding:20px; font-size:12px; color:#888888;">
-          © {datetime.now().year} Iu-ventus. Tutti i diritti riservati.
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-"""
-    msg.add_alternative(html, subtype="html")
-
-    # Invia
-    context = ssl.create_default_context()
-    server = None
-    try:
-        server = smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port'])
-        server.ehlo()
-        server.starttls(context=context)
-        server.ehlo()
-        server.login(configurazioni['smtp_user'], configurazioni['smtp_password'])
-        server.send_message(msg)
-    except Exception as e:
-        print(f"Errore durante l'invio dell'email: {e}")
-    finally:
-        if server:
-            server.quit()
-
-    return code
-
 @app.route("/forgot", methods=["GET", "POST"])
 def forgot():
+
     if "user_id" in session:
-        flash("Sei già registrato, non è necessario cambiare password")
+        flash("Sei già registrato, non è necessario cambiare password", "error")
         return redirect(url_for("index"))
+
+    if request.method == "GET" and request.args.get("reset"):
+        for key in ("code_sent", "code", "forgot_email", "sent_time"):
+            session.pop(key, None)
+        flash("Inserisci di nuovo la tua email", "error")
+        return redirect(url_for("forgot"))
 
     # Stato della procedura: se il codice è già stato inviato
     code_sent = session.get("code_sent", False)
@@ -440,27 +452,35 @@ def forgot():
         if request.args.get("resend") and code_sent:
             now = time.time()
             if now - session.get("sent_time", 0) < 60:
-                flash("Devi attendere qualche secondo prima di reinviare il codice")
+                flash("Devi attendere qualche secondo prima di reinviare il codice", "error")
                 return redirect(url_for("forgot"))
             # Reinvia
             code = email_sender(email)
             session['sent_time'] = now
-            flash("Codice reinviato con successo")
+            flash("Codice reinviato con successo", "success")
             return redirect(url_for("forgot"))
 
         # --- 2) Prima fase: invio email con codice
         if not code_sent:
             try:
                 validate_email(email, check_deliverability=True)
+                db = connct()
+                cur = db.cursor()
+                cur.execute("SELECT email FROM users WHERE email = ?", (email,))
+                row = cur.fetchone()
+                cur.close()
+                db.close()
+                if not row:
+                    raise EmailNotValidError("Email non trovata nel database")
                 code = email_sender(email)
-                session['code']         = code
-                session['code_sent']    = True
+                session['code'] = code
+                session['code_sent'] = True
                 session['forgot_email'] = email
-                session['sent_time']    = time.time()
-                flash("Codice di verifica inviato all'indirizzo indicato")
+                session['sent_time'] = time.time()
+                flash("Codice di verifica inviato all'indirizzo indicato", "success")
                 return redirect(url_for("forgot"))
             except EmailNotValidError as e:
-                flash(f"Email invalida: {e}")
+                flash(f"Email invalida: {e}", "error")
 
         # --- 3) Seconda fase: verifica del codice inserito
         else:
@@ -468,15 +488,23 @@ def forgot():
             if user_code == session.get("code"):
                 # Codice corretto: reindirizza al reset della password
                 session.pop("code_sent", None)
+                session['cambia_password'] = True
                 return redirect(url_for("reset_password"))
             else:
-                flash("Codice errato. Riprova o cambia email.")
+                flash("Codice errato. Riprova o cambia email.", "error")
 
     return render_template("forgot.html", code_sent=code_sent, email=email)
 
 
 @app.route("/reset_password", methods=["GET", "POST"])
 def reset_password():
+    if "user_id" in session:
+        flash("Sei già registrato, non è necessario resettare password", "error")
+        return redirect(url_for("index"))
+    if session.get("cambia_password", False):
+        flash("uwu", "error")
+    else:
+        flash("owo", "success")
     return render_template("reset_password.html");
 
 
