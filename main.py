@@ -280,79 +280,137 @@ def profile():
     user_id = session["user_id"]
     user_type = session.get("user_type", "Student")
     cur = g.db.cursor()
+    error_occurred = False  # Flag per tracciare gli errori
 
     if request.method == "POST":
-        # bio & profile pic
-        bio = request.form.get("bio", "")
-        file = request.files.get("profile_pic")
-        username_input = request.form.get('username', '').strip()
-        if not username_input:
-            username_input = None
+        try:
+            # Inizializza le variabili
+            bio = request.form.get("bio", "")
+            file = request.files.get("profile_pic")
+            username_input = request.form.get('username', '').strip() or None
+            update_success = False
 
-        if file and allowed_file(file.filename):
-            pic_filename = secure_filename(f"user_{user_id}.png")
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], pic_filename)
-            img = Image.open(file).convert("RGB")
-            img.thumbnail((200, 200), Image.Resampling.LANCZOS)
-            img.save(filepath)
-            cur.execute("UPDATE users SET bio=?, profile_pic=?, Username=? WHERE id=?", (bio, pic_filename, username_input, user_id))
-        else:
-            cur.execute("UPDATE users SET bio=?, Username=? WHERE id=?", (bio, username_input, user_id))
+            # Gestione immagine profilo
+            pic_filename = None
+            if file and allowed_file(file.filename):
+                pic_filename = secure_filename(f"user_{user_id}.png")
+                filepath = os.path.join(app.config["UPLOAD_FOLDER"], pic_filename)
+                img = Image.open(file).convert("RGB")
+                img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+                img.save(filepath)
 
-        # — Studenti: carica CV + tags
-        if user_type == "Student":
-            cv = request.files.get("cv_file")
-            if cv and cv.filename.lower().endswith(".pdf"):
-                cv_filename = secure_filename(f"cv_{user_id}.pdf")
-                cv.save(os.path.join(app.config["UPLOAD_FOLDER"], cv_filename))
-                cur.execute("UPDATE users SET cv_file=? WHERE id=?", (cv_filename, user_id))
-            tags = request.form.get("tags", "")
-            tag_list = [t.strip() for t in tags.split(",") if t.strip()][:3]
-            cur.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
-            for t in tag_list:
-                tid = get_or_create_tag(t)
-                cur.execute("INSERT INTO user_tags (user_id, tag_id) VALUES (?,?)", (user_id, tid))
+            # Aggiornamento dati base
+            if pic_filename:
+                cur.execute("UPDATE users SET bio=?, profile_pic=?, Username=? WHERE id=?",
+                           (bio, pic_filename, username_input, user_id))
+            else:
+                cur.execute("UPDATE users SET bio=?, Username=? WHERE id=?",
+                           (bio, username_input, user_id))
 
-        # — Azienda
-        if user_type == "Business":
-            address = request.form.get("address", "")
-            phone   = request.form.get("phone", "")
-            cur.execute("UPDATE users SET address=?, phone=? WHERE id=?", (address, phone, user_id))
-            tags = request.form.get("tags", "")
-            tag_list = [t.strip() for t in tags.split(",") if t.strip()][:3]
-            cur.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
-            for t in tag_list:
-                tid = get_or_create_tag(t)
-                cur.execute("INSERT INTO user_tags (user_id, tag_id) VALUES (?,?)", (user_id, tid))
+            # Gestione tipologia utente
+            if user_type == "Student":
+                cv = request.files.get("cv_file")
+                if cv and cv.filename.lower().endswith(".pdf"):
+                    cv_filename = secure_filename(f"cv_{user_id}.pdf")
+                    cv.save(os.path.join(app.config["UPLOAD_FOLDER"], cv_filename))
+                    cur.execute("UPDATE users SET cv_file=? WHERE id=?", (cv_filename, user_id))
+                
+                tags = request.form.get("tags", "")
+                tag_list = [t.strip() for t in tags.split(",") if t.strip()][:3]
+                cur.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
+                for t in tag_list:
+                    tid = get_or_create_tag(t)
+                    cur.execute("INSERT INTO user_tags (user_id, tag_id) VALUES (?,?)", (user_id, tid))
 
-        g.db.commit()
-        flash("Profilo aggiornato con successo", "success")
+            elif user_type == "Business":
+                address = request.form.get("address", "")
+                phone = request.form.get("phone", "")
+                cur.execute("UPDATE users SET address=?, phone=? WHERE id=?", (address, phone, user_id))
+                
+                tags = request.form.get("tags", "")
+                tag_list = [t.strip() for t in tags.split(",") if t.strip()][:3]
+                cur.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
+                for t in tag_list:
+                    tid = get_or_create_tag(t)
+                    cur.execute("INSERT INTO user_tags (user_id, tag_id) VALUES (?,?)", (user_id, tid))
+
+            # Gestione email/password
+            new_email = request.form.get("email", "").strip()
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+
+            if new_email or new_password:
+                cur.execute("SELECT password, email FROM users WHERE id = ?", (user_id,))
+                result = cur.fetchone()
+                
+                if not result:
+                    flash("Errore durante il recupero dei dati utente", "error")
+                    error_occurred = True
+                else:
+                    current_pass_hash, current_email = result
+                    
+                    if not current_password:
+                        flash("Password attuale richiesta per modifiche sensibili", "error")
+                        error_occurred = True
+                    elif not bcrypt.checkpw(current_password.encode('utf-8'), current_pass_hash.encode('utf-8')):
+                        flash("Password attuale non corretta", "error")
+                        error_occurred = True
+                    else:
+                        # Aggiornamento email
+                        if new_email:
+                            try:
+                                validate_email(new_email, check_deliverability=True)
+                                if new_email == current_email:
+                                    flash("Email identica a quella esistente", "info")
+                                else:
+                                    cur.execute("SELECT id FROM users WHERE email = ?", (new_email,))
+                                    if cur.fetchone():
+                                        flash("Email già registrata", "error")
+                                        error_occurred = True
+                                    else:
+                                        cur.execute("UPDATE users SET email = ? WHERE id = ?", 
+                                                   (new_email, user_id))
+                                        flash("Email aggiornata con successo", "success")
+                            except EmailNotValidError as e:
+                                flash(f"Email non valida: {str(e)}", "error")
+                                error_occurred = True
+                        
+                        # Aggiornamento password
+                        if new_password:
+                            if len(new_password) < 8:
+                                flash("La password deve contenere almeno 8 caratteri", "error")
+                                error_occurred = True
+                            else:
+                                new_hash = generate_password_hash(new_password)
+                                cur.execute("UPDATE users SET password = ? WHERE id = ?", 
+                                           (new_hash, user_id))
+                                flash("Password aggiornata con successo", "success")
+
+            # Commit finale solo se nessun errore
+            if not error_occurred:
+                g.db.commit()
+                flash("Profilo aggiornato con successo", "success")
+            else:
+                g.db.rollback()
+
+        except Exception as e:
+            g.db.rollback()
+            flash(f"Errore durante l'aggiornamento: {str(e)}", "error")
+            error_occurred = True
+
         return redirect(url_for("profile"))
 
-    # GET: recupera dati esistenti
+    # GET: Caricamento dati
     cur.execute("SELECT email, user_type, profile_pic, bio, cv_file, address, phone, Username FROM users WHERE id=?", (user_id,))
-    email, user_type, profile_pic, bio, cv_file, address, phone, username = cur.fetchone()
+    user_data = cur.fetchone()
+    email, user_type, profile_pic, bio, cv_file, address, phone, username = user_data
 
-    # recupera i tag selezionati
-    cur.execute("""
-        SELECT t.name FROM tags t
-        JOIN user_tags ut ON ut.tag_id = t.id
-        WHERE ut.user_id = ?
-    """, (user_id,))
+    cur.execute("SELECT t.name FROM tags t JOIN user_tags ut ON ut.tag_id = t.id WHERE ut.user_id = ?", (user_id,))
     user_tags = [row[0] for row in cur.fetchall()]
-
-    # recupera tutti i tag con contatore per il form
-    cur.execute("""
-        SELECT t.name, COUNT(ut.user_id) as cnt
-        FROM tags t
-        LEFT JOIN user_tags ut ON ut.tag_id = t.id
-        GROUP BY t.id
-        ORDER BY cnt DESC
-    """)
-    all_tags = [{"name": row[0], "count": row[1]} for row in cur.fetchall()]
 
     return render_template(
         "profile.html",
+        username=username,
         email=email,
         user_type=user_type,
         profile_pic=profile_pic,
@@ -360,8 +418,7 @@ def profile():
         cv_file=cv_file,
         address=address,
         phone=phone,
-        user_tags=user_tags,
-        all_tags=all_tags
+        user_tags=user_tags
     )
 
 @app.route("/user/<int:user_id>")
