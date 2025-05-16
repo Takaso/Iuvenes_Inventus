@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 {% block title %}Iu-ventus | Home{% endblock %}
 {% block content %}
@@ -14,7 +13,7 @@
         {% for user, score in users_with_scores %}
         {% if user.user_type == 'Business' %}
         <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-white">{{ user.email }}</h2>
+            <h2 class="text-xl font-semibold text-white">{{ user.Username if user.Username else user.email }}</h2>
             <p class="text-gray-200">{{ user.address }} &middot; {{ user.phone }}</p>
             <div class="mt-2 flex flex-wrap gap-2">
                 {% for tag in user.tags %}
@@ -40,7 +39,7 @@
         {% for user, score in users_with_scores %}
         {% if user.user_type == 'Student' %}
         <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-white">{{ user.email }}</h2>
+            <h2 class="text-xl font-semibold text-white">{{ user.Username if user.Username else user.email }}</h2>
             {% if user.cv_file %}
             <a href="{{ url_for('uploaded_file', filename=user.cv_file) }}"
                 class="text-blue-400 hover:underline text-sm">Scarica CV</a>
@@ -63,7 +62,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for user, score in users_with_scores %}
         <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold text-white">{{ user.email }}</h2>
+            <h2 class="text-xl font-semibold text-white">{{ user.Username if user.Username else user.email }}</h2>
             <p class="text-gray-200">Tipo: {{ user.user_type }}</p>
             {% if user.user_type == 'Business' %}
             <p class="text-gray-200">{{ user.address }} &middot; {{ user.phone }}</p>
