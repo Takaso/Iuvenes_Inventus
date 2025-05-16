@@ -28,22 +28,68 @@
     {% endfor %}
     </div>
     {%- endwith %}
-    <header>
+    <header class="bg-gray-800 border-b border-gray-700">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center">
+                    <a href="{{ url_for('index') }}" class="flex items-center space-x-2">
+                        <img src="{{ url_for('static', filename='logo/logo_quadrato.png') }}" class="h-8 w-8" alt="Logo">
+                        <span class="text-xl font-bold text-white">Iu-ventus</span>
+                    </a>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="flex items-center space-x-6">
+                    {% if session.get('user_id') %}
+                        <!-- Admin Dashboard -->
+                        {% if session.get('user_type') == 'Admin' %}
+                            <a href="{{ url_for('view_database') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                                Database
+                            </a>
+                        {% endif %}
+
+                        <!-- Profile -->
+                        <a href="{{ url_for('profile') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                            Profile
+                        </a>
+
+                        <!-- User Email -->
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm font-medium text-gray-400">
+                                {{ session.get('email', '') }}
+                            </span>
+                            <!-- Logout -->
+                            <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors">
+                                Logout
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- Guest Links -->
+                        <a href="{{ url_for('login') }}" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                            Login
+                        </a>
+                        <a href="{{ url_for('signup') }}" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors">
+                            Sign Up
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
     </header>
+
     <main class="flex-grow">
         {% block content %}{% endblock %}
     </main>
 
-    <script> // Codice per la notifica (scritto in JS)
+    <script> 
         document.addEventListener("DOMContentLoaded", () => {
             const toasts = document.querySelectorAll("#toast-container .toast");
             toasts.forEach((t, i) => {
-                // Mostra
                 setTimeout(() => {
                     t.classList.remove("-translate-y-8", "opacity-0");
                     t.classList.add("translate-y-0", "opacity-100");
                 }, 100 * (i + 1));
-                // Nascondi dopo 3 secondi
                 setTimeout(() => {
                     t.classList.remove("translate-y-0", "opacity-100");
                     t.classList.add("-translate-y-8", "opacity-0");
