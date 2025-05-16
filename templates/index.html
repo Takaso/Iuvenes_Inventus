@@ -1,22 +1,7 @@
+
 {% extends "base.html" %}
 {% block title %}Iu-ventus | Home{% endblock %}
 {% block content %}
-<header class="w-full bg-gray-800 shadow-md border-b border-gray-700">
-    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="{{ url_for('index') }}" class="text-white font-semibold text-lg hover:text-blue-400 transition">
-            Home
-        </a>
-        {% if 'user_id' in session %}
-        <a href="{{ url_for('profile') }}" class="flex items-center text-gray-300 hover:text-white transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.209 0 4-1.791 4-4s-1.791-4-4-4-4 1.791-4 4 1.791 4 4 4zm0 2c-2.673 0-8 1.337-8 4v2h16v-2c0-2.663-5.327-4-8-4z"/>
-            </svg>
-            Profilo
-        </a>
-        {% endif %}
-    </div>
-</header>
-
 <main class="flex-grow px-4 py-6">
     {% if session.get('user_type') == 'Student' %}
     <!-- per gli studenti: cerca e lista account -->
