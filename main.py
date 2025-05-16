@@ -158,7 +158,7 @@ def index():
     # scegliamo quali colonne prendere in base al tipo
     if user_id:
         if user_type == "Student":
-            cur.execute("SELECT id, email, user_type, address, phone FROM users WHERE user_type='Business'")
+            cur.execute("SELECT id, email, user_type, address, phone, Username FROM users WHERE user_type='Business'")
         elif user_type == "Business":
             cur.execute("SELECT id, email, user_type, cv_file FROM users WHERE user_type='Student'")
         elif user_type == "Admin":
@@ -202,6 +202,9 @@ def index():
 def signup():
     if request.method == "POST":
         try:
+            username = request.form.get("username", "").strip()
+            if not username:
+                username = None
             email = request.form["email"]
             validate_email(email, check_deliverability=True)
             password = request.form["password"]
@@ -212,8 +215,8 @@ def signup():
                 try:
                     cur = conn.cursor()
                     cur.execute(
-                        "INSERT INTO users (email, password, user_type) VALUES (?, ?, ?)",
-                        (email, hashed_password, user_type)
+                        "INSERT INTO users (email, password, user_type, Username) VALUES (?, ?, ?, ?)",
+                        (email, hashed_password, user_type, username)
                     )
                     conn.commit()
                     flash("Account creato con successo!", "success");
@@ -283,15 +286,19 @@ def profile():
         # bio & profile pic
         bio = request.form.get("bio", "")
         file = request.files.get("profile_pic")
+        username_input = request.form.get('username', '').strip()
+        if not username_input:
+            username_input = None
+
         if file and allowed_file(file.filename):
             pic_filename = secure_filename(f"user_{user_id}.png")
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], pic_filename)
             img = Image.open(file).convert("RGB")
             img.thumbnail((200, 200), Image.Resampling.LANCZOS)
             img.save(filepath)
-            cur.execute("UPDATE users SET bio=?, profile_pic=? WHERE id=?", (bio, pic_filename, user_id))
+            cur.execute("UPDATE users SET bio=?, profile_pic=?, Username=? WHERE id=?", (bio, pic_filename, username_input, user_id))
         else:
-            cur.execute("UPDATE users SET bio=? WHERE id=?", (bio, user_id))
+            cur.execute("UPDATE users SET bio=?, Username=? WHERE id=?", (bio, username_input, user_id))
 
         # — Studenti: carica CV + tags
         if user_type == "Student":
@@ -324,8 +331,8 @@ def profile():
         return redirect(url_for("profile"))
 
     # GET: recupera dati esistenti
-    cur.execute("SELECT email, user_type, profile_pic, bio, cv_file, address, phone FROM users WHERE id=?", (user_id,))
-    email, user_type, profile_pic, bio, cv_file, address, phone = cur.fetchone()
+    cur.execute("SELECT email, user_type, profile_pic, bio, cv_file, address, phone, Username FROM users WHERE id=?", (user_id,))
+    email, user_type, profile_pic, bio, cv_file, address, phone, username = cur.fetchone()
 
     # recupera i tag selezionati
     cur.execute("""
@@ -379,14 +386,14 @@ def view_user(user_id):
         return redirect(url_for("index"))
 
     user = {
-        "id":       row[0],
-        "email":    row[1],
-        "user_type":row[2],
+        "id": row[0],
+        "email": row[1],
+        "user_type": row[2],
         "profile_pic": row[3],
-        "bio":      row[4],
-        "cv_file":  row[5],
-        "address":  row[6],
-        "phone":    row[7]
+        "bio": row[4],
+        "cv_file": row[5],
+        "address": row[6],
+        "phone": row[7]
     }
 
     # Recuperiamo i tag associati a questo utente
