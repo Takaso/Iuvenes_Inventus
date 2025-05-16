@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% block title %}Iu-ventus | Home{% endblock %}
 {% block content %}
@@ -19,7 +20,7 @@
 
 <main class="flex-grow px-4 py-6">
     {% if session.get('user_type') == 'Student' %}
-    <!-- STUDENT VIEW: search and list Business accounts -->
+    <!-- per gli studenti: cerca e lista account -->
     <form action="{{ url_for('index') }}" method="GET" class="max-w-md mx-auto mb-6">
         <input type="text" name="q" placeholder="Cerca aziende per tag..."
             class="w-full px-4 py-2 bg-gray-700 text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -45,7 +46,7 @@
     </div>
 
     {% elif session.get('user_type') == 'Business' %}
-    <!-- BUSINESS VIEW: search and list Student accounts -->
+    <!-- per aziende -->
     <form action="{{ url_for('index') }}" method="GET" class="max-w-md mx-auto mb-6">
         <input type="text" name="q" placeholder="Cerca studenti per tag..."
             class="w-full px-4 py-2 bg-gray-700 text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" />
@@ -74,7 +75,7 @@
     </div>
 
     {% elif session.get('user_type') == 'Admin' %}
-    <!-- ADMIN VIEW: Vedi tutti gli utenti -->
+    <!-- per admin -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for user, score in users_with_scores %}
         <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
@@ -116,10 +117,10 @@
             </a>
         </div>
     
-        <!-- Features -->
+        <!-- features -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
             <div class="flex flex-col items-center space-y-3">
-            <!-- Icona ricerca -->
+            <!-- icona ricerca -->
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -131,7 +132,7 @@
             </p>
             </div>
             <div class="flex flex-col items-center space-y-3">
-            <!-- Icona documento -->
+            <!-- icona documento -->
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -143,7 +144,7 @@
             </p>
             </div>
             <div class="flex flex-col items-center space-y-3">
-            <!-- Icona chat -->
+            <!-- icona chat -->
             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-pink-400" fill="none"
                 viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
