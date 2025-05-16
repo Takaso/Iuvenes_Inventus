@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -11,17 +12,22 @@
     </script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-
-    <!-- HTML della notifica di errore -->
-    {% with messages = get_flashed_messages() %} <!-- Prendiamo tutti i messaggi flashati da flask !-->
-    <div id="toast-container" class="fixed inset-x-0 top-4 flex flex-col items-center space-y-2 pointer-events-none z-50">
-        {% for m in messages %}
-        <div class="toast max-w-sm w-full bg-blue-600/80 text-white text-center px-4 py-2 rounded-lg shadow-2xl transform -translate-y-8 opacity-0 transition-all duration-500 ease-out">
-            {{ m }}
-        </div>
-        {% endfor %}
+    {%- with messages = get_flashed_messages(with_categories=true) %}
+        <div id="toast-container" class="fixed inset-x-0 top-4 flex flex-col items-center space-y-2 pointer-events-none z-50">
+        {% for category, msg in messages %}
+            {% set bg_color = {
+            'success': 'bg-green-600/80',
+            'error'  : 'bg-red-600/80'
+            }[category] or 'bg-gray-600/80' %}
+            <div class="toast max-w-sm w-full
+                {{ bg_color }}
+            text-white text-center px-4 py-2 rounded-lg shadow-2xl transform -translate-y-8 opacity-0 transition-all duration-500 ease-out"
+            data-category="{{ category }}">
+            {{ msg }}
+            </div>
+    {% endfor %}
     </div>
-    {% endwith %}
+    {%- endwith %}
     <header>
     </header>
     <main class="flex-grow">
