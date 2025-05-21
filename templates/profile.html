@@ -91,7 +91,8 @@
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-200 mb-1">Username</label>
                 <input type="text" id="username" name="username" value="{{ username }}"
-                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
+                maxlength="15"
+                class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
             </div>
             <!-- Email Update -->
             <div>
@@ -117,10 +118,31 @@
 
             <!-- Bio Input -->
             <div>
-            <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
-            <textarea id="bio" name="bio" rows="4"
+                <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
+                <textarea id="bio" name="bio" rows="4"
+                        maxlength="1500"
                         class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 max-h-40 overflow-y-auto">{{ bio }}</textarea>
+                <!-- Lunghezza -->
+                <div class="text-right text-sm mt-1 text-gray-400">
+                    <span id="bio-counter">{{ (bio or '')|length }}</span>/1500
+                </div>
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Contatore caratteri
+                    const bioTextarea = document.getElementById("bio");
+                    const bioCounter = document.getElementById("bio-counter");
+                    function updateBioCounter() {
+                        const currentLength = bioTextarea.value.length;
+                        bioCounter.textContent = currentLength;
+                        // Cambia colore quando il limite è vicino
+                        bioCounter.style.color = currentLength > 1400 ? '#ef4444' : '#9CA3AF';
+                    }
+                    bioTextarea.addEventListener("input", updateBioCounter);
+                    // Inizializza l'evento
+                    updateBioCounter();
+                });
+            </script>
 
             <!-- File and Contact Inputs -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
