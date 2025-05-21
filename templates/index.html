@@ -3,166 +3,445 @@
 {% block content %}
 <main class="flex-grow px-4 py-8">
     {% if session.get('user_type') %}
-    <!-- Logged-in Users View -->
-    <div class="max-w-7xl mx-auto">
-        <form action="{{ url_for('index') }}" method="GET" class="max-w-2xl mx-auto mb-10">
-            <div class="relative">
-                <input 
-                    type="text" 
-                    name="q" 
-                    placeholder="Cerca per competenze, settori, strumenti..."
-                    value="{{ request.args.get('q', '') }}"
-                    class="w-full px-6 py-4 bg-gray-800 text-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 pr-14 transition-all duration-300 hover:bg-gray-700/20"
-                />
-                <svg class="absolute right-4 top-4 h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-            </div>
-        </form>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
-            {% for user, score in users_with_scores %}
-            <div class="group bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-blue-500/30">
-                <!-- Profile Header -->
-                <div class="flex items-start gap-4 mb-4">
-                    <!-- Profile Picture -->
-                    <div class="relative">
-                        {% if user.profile_pic %}
-                        <img 
-                            src="{{ url_for('uploaded_file', filename=user.profile_pic) }}" 
-                            class="h-14 w-14 rounded-full object-cover border-2 border-blue-500 shadow-md"
-                            alt="Profile"
-                        >
-                        {% else %}
-                        <div class="h-14 w-14 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 border-2 border-blue-500 flex items-center justify-center shadow-inner">
-                            <span class="text-white font-medium text-xl">
-                                {{ (user.Username|default(user.email, true))|default('?', true)|first|upper }}
-                            </span>
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Colonna sinistra - Crea post -->
+            <div class="lg:col-span-3">
+                <div class="sticky top-4 space-y-6">
+                    {% if session.get('user_id') %}
+                    <div class="bg-gradient-to-br from-blue-900/80 to-purple-900/80 p-6 rounded-2xl shadow-2xl border border-blue-500/20 backdrop-blur-lg hover:shadow-2xl transition-all duration-300">
+                        <div class="flex items-center gap-2 mb-6 group">
+                            <svg class="w-6 h-6 text-blue-400 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <h2 class="text-xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                                Crea Post
+                            </h2>
                         </div>
-                        {% endif %}
-                        <div class="absolute -bottom-1 -right-1 bg-gray-900 rounded-full p-1 border-2 border-gray-800 shadow-sm">
-                            <div class="h-6 w-6 flex items-center justify-center text-xs font-bold 
-                                {% if user.user_type == 'Student' %}text-green-400 bg-green-900/20
-                                {% elif user.user_type == 'Business' %}text-blue-400 bg-blue-900/20
-                                {% else %}text-purple-400 bg-purple-900/20{% endif %} rounded-full">
-                                {{ user.user_type|first }}
+                        <form action="{{ url_for('create_post') }}" method="POST" enctype="multipart/form-data" class="space-y-4" x-data="imagePreview()">
+                            <input type="text"
+                                name="title"
+                                placeholder="Titolo del post"
+                                maxlength="100"
+                                class="w-full px-4 py-3 bg-gray-800/60 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400"
+                                required />
+
+                            <textarea
+                                name="content"
+                                placeholder="Contenuto del post"
+                                class="w-full px-4 py-3 bg-gray-800/60 rounded-xl text-white auto-resize focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400 min-h-[120px]"
+                                required></textarea>
+
+                            <input type="text"
+                                name="tags"
+                                placeholder="Tag (separati da virgola)"
+                                class="w-full px-4 py-3 bg-gray-800/60 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400" />
+
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-blue-300">Immagine (opzionale):</label>
+                                <div class="relative border-2 border-dashed border-blue-500/30 rounded-xl p-4 transition-all hover:border-blue-500/60 group/image-upload">
+                                    <input id="imageInput"
+                                        type="file"
+                                        name="image"
+                                        accept="image/*"
+                                        @change="file = $event.target.files[0]; preview = URL.createObjectURL(file)" 
+                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                    <div class="text-center">
+                                        <svg class="mx-auto h-8 w-8 text-blue-400 group-hover/image-upload:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <p class="mt-2 text-sm text-gray-300">Trascina o clicca per upload</p>
+                                    </div>
+                                </div>
+                                
+                                <template x-if="preview">
+                                    <div class="mt-2 relative">
+                                        <img :src="preview" class="w-full h-auto rounded-xl border-2 border-blue-500/30 shadow-lg" />
+                                        <button type="button"
+                                            @click="clearPreview"
+                                            class="absolute -top-3 -right-3 bg-red-500/90 hover:bg-red-600 rounded-full p-1.5 shadow-sm transition-all">
+                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <button type="submit"
+                                class="w-full py-3.5 bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl text-white font-bold transition-all 
+                                    transform hover:scale-[1.02] shadow-lg hover:shadow-xl active:scale-95">
+                                Pubblica
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Colonna in mezzo - Posts Feed -->
+            <div class="lg:col-span-6 space-y-6">
+                <!-- Search Bar -->
+                <div class="bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-700/50 mb-6">
+                    <form class="flex items-center gap-2 p-4" method="GET" action="{{ url_for('index') }}">
+                        <input type="hidden" name="type" value="posts">
+                        <div class="flex-1 relative">
+                            <input type="text"
+                                name="q"
+                                value="{{ request.args.get('q', '') }}" 
+                                placeholder="Cerca nei post..."
+                                class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        </div>
+                        <select name="search_field"
+                            class="px-4 py-2 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            <option value="content" {% if request.args.get('search_field')=='content' %}selected{% endif %}>Descrizione</option>
+                            <option value="title" {% if request.args.get('search_field')=='title' %}selected{% endif %}>Titolo</option>
+                            <option value="tags" {% if request.args.get('search_field')=='tags' %}selected{% endif %}>Tag</option>
+                        </select>
+                        <button type="submit"
+                            class="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-medium transition-all
+                                focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Posts List -->
+                {% if posts %}
+                    {% for post in posts %}
+                    <div class="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow group/post">
+                        <!-- Post Header -->
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="flex items-center gap-4">
+                                <div class="relative">
+                                    <img src="{{ url_for('uploaded_file', filename=post.profile_pic) if post.profile_pic else url_for('static', filename='logo/logo_quadrato.png') }}" 
+                                        class="h-14 w-14 rounded-full object-cover border-2 border-blue-500/30 shadow-md" />
+                                    <div class="absolute -bottom-1 -right-1 bg-gray-900 rounded-full p-0.5 border-2 border-gray-800">
+                                        <div class="h-6 w-6 flex items-center justify-center text-xs font-bold 
+                                                {% if post.user_type=='Admin' %}text-purple-400 bg-purple-900/20
+                                                {% elif post.user_type=='Business' %}text-blue-400 bg-blue-900/20
+                                                {% else %}text-green-400 bg-green-900/20{% endif %} 
+                                                rounded-full backdrop-blur-sm">
+                                            {{ post.user_type|first }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="font-bold text-white text-lg">{{ post.Username }}</h3>
+                                        <span class="text-xs {% if post.user_type=='Admin' %}text-purple-300{% elif post.user_type=='Business' %}text-blue-300{% else %}text-green-300{% endif %} 
+                                                px-2.5 py-1 rounded-full bg-gray-700/40 backdrop-blur-sm flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                {% if post.user_type == 'Admin' %}
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                                {% elif post.user_type == 'Business' %}
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                                {% else %}
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                {% endif %}
+                                            </svg>
+                                            {{ post.user_type }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-1">{{ post.creation_date|datetimeformat }}</p>
+                                </div>
+                            </div>
+                            {% if session.user_id == post.user_id %}
+                            <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST">
+                                <button type="submit" class="opacity-0 group-hover/post:opacity-100 text-gray-400 hover:text-red-400 transition-all">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- Post Content -->
+                        <div class="mb-6 space-y-4">
+                            {% if post.title %}
+                            <h2 class="text-2xl font-bold text-white mb-2 pb-2 border-b border-gray-700/50">
+                                {{ post.title }}
+                            </h2>
+                            {% endif %}
+                            <div class="text-gray-300 space-y-4 text-lg leading-relaxed">
+                                <div class="prose prose-invert max-w-none text-gray-300/90">
+                                    {{ post.content|urlize(target="_blank")|safe }}
+                                </div>
+                                {% if post.image %}
+                                <div class="relative mt-4 rounded-xl overflow-hidden border-2 border-gray-700/50">
+                                    <img src="{{ url_for('uploaded_file', filename=post.image) }}" 
+                                        class="w-full h-auto max-h-96 object-contain bg-gray-900" 
+                                        loading="lazy" 
+                                        alt="Immagine del post" />
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Name & Details -->
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-lg font-bold text-white truncate">
-                            {{ user.Username if user.Username else user.email }}
-                        </h2>
-                        <div class="text-xs text-gray-400 mt-1">
-                            {{ user.user_type }}
+                        <!-- Tags -->
+                        {% if post.tags %}
+                        <div class="flex flex-wrap gap-2 pt-4 border-t border-gray-700/50">
+                            {% for tag in post.tags %}
+                            <a href="{{ url_for('index', q=tag, type='posts', search_field='tags') }}" 
+                            class="px-3 py-1.5 bg-gray-700/40 text-sm text-blue-300 rounded-full 
+                                    hover:bg-blue-500/20 hover:text-blue-200 transition-all 
+                                    backdrop-blur-sm flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                                {{ tag }}
+                            </a>
+                            {% endfor %}
                         </div>
+                        {% endif %}
+
+                    <!-- Comments Section -->
+                    <div class="mt-8 space-y-6">
+                        <form action="{{ url_for('add_comment', post_id=post.id) }}" method="POST" class="flex gap-3 mb-4">
+                            <textarea name="content"
+                                class="flex-1 px-4 py-2.5 bg-gray-700 rounded-xl text-white placeholder-gray-400
+                                    focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all
+                                    text-base leading-relaxed resize-none"
+                                placeholder="Scrivi un commento..."
+                                rows="1"
+                                oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+                            <button type="submit"
+                                class="self-start px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white
+                                    font-medium transition-colors shadow-sm hover:shadow-md">
+                                Invia
+                            </button>
+                        </form>
+
+                        {% for comment in post.comments %}
+                        <div class="bg-gray-700/30 p-4 rounded-xl group/comment">
+                            <!-- Header commenti -->
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <img src="{{ url_for('uploaded_file', filename=comment.profile_pic) if comment.profile_pic else url_for('static', filename='logo/logo_quadrato.png') }}"
+                                            class="w-10 h-10 rounded-full object-cover border-2 border-blue-500/30 shadow-sm" />
+                                        <div class="absolute -bottom-1 -right-1 bg-gray-900 rounded-full p-0.5 border-2 border-gray-800">
+                                            <div class="h-5 w-5 flex items-center justify-center text-[10px] font-bold
+                                                    {% if comment.user_type == 'Admin' %}text-purple-400 bg-purple-900/20
+                                                    {% elif comment.user_type == 'Business' %}text-blue-400 bg-blue-900/20
+                                                    {% else %}text-green-400 bg-green-900/20{% endif %}
+                                                    rounded-full backdrop-blur-sm">
+                                                {{ comment.user_type|first }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-medium text-white">{{ comment.Username }}</span>
+                                            <span class="text-xs {% if comment.user_type == 'Admin' %}text-purple-300{% elif comment.user_type == 'Business' %}text-blue-300{% else %}text-green-300{% endif %} 
+                                                    px-2 py-0.5 rounded-full bg-gray-700/40 backdrop-blur-sm">
+                                                {{ comment.user_type }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ comment.created_at|datetimeformat }}</p>
+                                    </div>
+                                </div>
+                                {% if session.user_id == comment.user_id %}
+                                <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="POST">
+                                    <button type="submit"
+                                            class="opacity-0 group-hover/comment:opacity-100 text-gray-400 hover:text-red-400
+                                                transition-all px-2 py-1">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+
+                            <!-- Da sistemare -->
+                            <div class="ml-13 pl-0.5">  <!-- ml-13 = 3.25rem (matcha la profile pic + gap) -->
+                                <div class="text-gray-300 whitespace-pre-wrap text-base leading-relaxed text-left
+                                        border-l-2 border-gray-600/30 pl-3">
+                                    {{ comment.content }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                </div>
 
-                <!-- Enhanced Bio Section -->
-                <div class="bg-gray-700/20 border border-gray-700/50 rounded-xl p-4 mb-6 transition-colors duration-300 hover:border-blue-500/30">
-                    <p class="text-gray-300 text-sm line-clamp-3 leading-relaxed font-light italic">
-                        "{{ user.bio|default('Nessuna bio disponibile', true) }}"
-                    </p>
-                </div>
-
-                <!-- Tags -->
-                <div class="flex flex-wrap gap-2 mb-6">
-                    {% for tag in user.tags %}
-                    <span class="px-3 py-1.5 bg-gray-700/50 text-xs font-medium text-blue-300 rounded-full backdrop-blur-sm hover:bg-blue-500/20 transition-colors duration-200">
-                        #{{ tag }}
-                    </span>
+                        
+                    </div>
                     {% endfor %}
-                </div>
-
-                <!-- Footer -->
-                <div class="flex items-center justify-between border-t border-gray-700/50 pt-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="relative">
-                            <div class="absolute -inset-1.5 bg-blue-500/10 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <span class="text-xs font-medium text-gray-400 relative">
-                                Match Score:
-                            </span>
-                        </div>
-                        <span class="text-sm font-bold text-blue-400">
-                            {{ score }}%
-                        </span>
+                {% else %}
+                    <div class="text-center py-12">
+                        <p class="text-gray-400 italic">Nessun post trovato. Sii il primo a condividere qualcosa!</p>
                     </div>
-                    <a href="{{ url_for('view_user', user_id=user.id) }}" 
-                        class="flex items-center justify-center h-9 w-9 rounded-full bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-white transition-colors group-hover:scale-110">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                        </svg>
-                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Colonna destra - Users Search -->
+            <div class="lg:col-span-3">
+                <div class="sticky top-4 space-y-6">
+                    <!-- Search Bar account -->
+                    <div class="bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-700/50">
+                        <form method="GET" action="{{ url_for('index') }}" class="p-4 flex items-center gap-2">
+                            <input type="hidden" name="type" value="users">
+                            <div class="flex-1 relative">
+                                <input type="text"
+                                    name="q"
+                                    placeholder="Cerca utenti..."
+                                    value="{{ request.args.get('q', '') }}"
+                                    class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            </div>
+                            <select name="search_user_field"
+                                class="px-4 py-2 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                                <option value="username" {% if request.args.get('search_user_field')=='username' %}selected{% endif %}>Username</option>
+                                <option value="tags" {% if request.args.get('search_user_field')=='tags' %}selected{% endif %}>Tag</option>
+                            </select>
+                            <button type="submit"
+                                class="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-medium transition-all 
+                                    focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                    <!-- Suggested Users -->
+                    <div class="space-y-4">
+                        {% if users_with_scores %}
+                            {% for user, score in users_with_scores %}
+                            <div class="group bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all 
+                                        duration-300 hover:-translate-y-1 hover:ring-1 hover:ring-blue-500/30">
+                                <!-- User Header -->
+                                <div class="flex items-start gap-4 mb-4">
+                                    <!-- Profile Picture -->
+                                    <div class="relative">
+                                        {% if user.profile_pic %}
+                                        <img src="{{ url_for('uploaded_file', filename=user.profile_pic) }}" 
+                                            class="h-14 w-14 rounded-full object-cover border-2 border-blue-500 shadow-md">
+                                        {% else %}
+                                        <div class="h-14 w-14 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 
+                                                border-2 border-blue-500 flex items-center justify-center shadow-inner">
+                                            <span class="text-white font-medium text-xl">
+                                                {{ (user.Username|default(user.email, true))|default('?', true)|first|upper }}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="absolute -bottom-1 -right-1 bg-gray-900 rounded-full p-1 border-2 border-gray-800 shadow-sm">
+                                            <div class="h-6 w-6 flex items-center justify-center text-xs font-bold 
+                                                    {% if user.user_type == 'Student' %}text-green-400 bg-green-900/20
+                                                    {% elif user.user_type == 'Business' %}text-blue-400 bg-blue-900/20
+                                                    {% else %}text-purple-400 bg-purple-900/20{% endif %} rounded-full">
+                                                {{ user.user_type|first }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dettagli utente -->
+                                    <div class="flex-1 min-w-0">
+                                        <h2 class="text-lg font-bold text-white truncate">
+                                            {{ user.Username if user.Username else user.email }}
+                                        </h2>
+                                        <div class="text-xs text-gray-400 mt-1">
+                                            {{ user.user_type }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tags -->
+                                {% if user.tags %}
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    {% for tag in user.tags %}
+                                    <span class="px-3 py-1.5 bg-gray-700/50 text-xs font-medium text-blue-300 
+                                            rounded-full backdrop-blur-sm hover:bg-blue-500/20 transition-colors">
+                                        #{{ tag }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <!-- Footer -->
+                                <div class="flex items-center justify-between border-t border-gray-700/50 pt-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs font-medium text-gray-400">
+                                            Match Score:
+                                        </span>
+                                        <span class="text-sm font-bold text-blue-400">
+                                            {{ score }}%
+                                        </span>
+                                    </div>
+                                    <a href="{{ url_for('view_user', user_id=user.id) }}" 
+                                    class="flex items-center justify-center h-9 w-9 rounded-full bg-blue-600/20 
+                                            hover:bg-blue-600/30 text-blue-400 hover:text-white transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-8">
+                                <p class="text-gray-400 italic">Nessun utente trovato</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
-    </div>
-
     {% else %}
-    <!-- GUEST VIEW -->
+    <!-- GUEST VIEW - Senza account -->
     <div class="flex justify-center py-20 px-4">
         <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
-        <h1 class="text-4xl font-bold text-white mb-4">Benvenuto su Iu-ventus</h1>
-        <p class="max-w-2xl mx-auto text-lg text-gray-300 mb-8">
-            Iu-ventus è il tuo ponte tra aziende e studenti: trova talenti, scopri nuovi profili e gestisci candidature in un clic.
-        </p>
-        <div class="mb-12 space-x-4">
-            <a href="{{ url_for('signup') }}"
-                class="inline-block px-8 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition">
-            Registrati
-            </a>
-            <a href="{{ url_for('login') }}"
-                class="inline-block px-8 py-3 border-2 border-blue-600 text-blue-400 font-medium rounded-lg hover:bg-blue-700 hover:text-white transition">
-            Accedi
-            </a>
-        </div>
-    
-        <!-- features -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div class="flex flex-col items-center space-y-3">
-            <!-- icona ricerca -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <h3 class="text-xl font-semibold text-white">Ricerca Intelligente</h3>
-            <p class="text-gray-400 text-sm text-center">
-                Filtra aziende o studenti in base ai tag più rilevanti.
+            <h1 class="text-4xl font-bold text-white mb-4">Benvenuto su Iu-ventus</h1>
+            <p class="max-w-2xl mx-auto text-lg text-gray-300 mb-8">
+                Iu-ventus è il tuo ponte tra aziende e studenti: trova talenti, scopri nuovi profili e gestisci candidature in un clic.
             </p>
+            <div class="mb-12 space-x-4">
+                <a href="{{ url_for('signup') }}"
+                    class="inline-block px-8 py-3 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700 transition">
+                    Registrati
+                </a>
+                <a href="{{ url_for('login') }}"
+                    class="inline-block px-8 py-3 border-2 border-blue-600 text-blue-400 font-medium rounded-lg hover:bg-blue-700 hover:text-white transition">
+                    Accedi
+                </a>
             </div>
-            <div class="flex flex-col items-center space-y-3">
-            <!-- icona documento -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M7 7h10M7 11h10M7 15h7m-4 5h2a2 2 0 002-2v-2H7v2a2 2 0 002 2z"/>
-            </svg>
-            <h3 class="text-xl font-semibold text-white">Gestione CV</h3>
-            <p class="text-gray-400 text-sm text-center">
-                Organizza e scarica tutti i curriculum in modo veloce.
-            </p>
+        
+            <!-- Features -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                <div class="flex flex-col items-center space-y-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-white">Ricerca Intelligente</h3>
+                    <p class="text-gray-400 text-sm text-center">
+                        Filtra aziende o studenti in base ai tag più rilevanti.
+                    </p>
+                </div>
+                
+                <div class="flex flex-col items-center space-y-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 11h10M7 15h7m-4 5h2a2 2 0 002-2v-2H7v2a2 2 0 002 2z"/>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-white">Gestione CV</h3>
+                    <p class="text-gray-400 text-sm text-center">
+                        Organizza e scarica tutti i curriculum in modo veloce.
+                    </p>
+                </div>
+                
+                <div class="flex flex-col items-center space-y-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v7a2 2 0 01-2 2H7l-4-4V10a2 2 0 012-2h2"/>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-white">Contatto Diretto</h3>
+                    <p class="text-gray-400 text-sm text-center">
+                        Notifiche integrate per comunicare velocemente.
+                    </p>
+                </div>
             </div>
-            <div class="flex flex-col items-center space-y-3">
-            <!-- icona chat -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-pink-400" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 8h2a2 2 0 012 2v7a2 2 0 01-2 2H7l-4-4V10a2 2 0 012-2h2"/>
-            </svg>
-            <h3 class="text-xl font-semibold text-white">Contatto Diretto</h3>
-            <p class="text-gray-400 text-sm text-center">
-                Notifiche integrate per comunicare velocemente.
-            </p>
-            </div>
-        </div>
         </div>
     </div>
     {% endif %}
-    
 </main>
 {% endblock %}
