@@ -845,5 +845,137 @@ def reset_password():
         flash("owo", "success")
     return render_template("reset_password.html");
 
+@app.route("/send_request/<int:receiver_id>", methods=["POST"])
+def send_request(receiver_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    sender_id = session["user_id"]
+    request_type = request.form.get("type", "contact_request")
+    message = request.form.get("message", "")
+
+    try:
+        cur = g.db.cursor()
+        cur.execute("""
+            INSERT INTO notifications (receiver_id, sender_id, type, message)
+            VALUES (?, ?, ?, ?)
+        """, (receiver_id, sender_id, request_type, message))
+        g.db.commit()
+        flash("Richiesta inviata con successo", "success")
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore: {str(e)}", "error")
+    
+    return redirect(url_for("view_user", user_id=receiver_id))
+@app.route("/notifications")
+def notifications():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    cur = g.db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT n.*,
+            u.Username as sender_name,
+            u.profile_pic as sender_pic,
+            u.user_type as user_type
+        FROM notifications n
+        JOIN users u ON n.sender_id = u.id
+        WHERE n.receiver_id = ?
+        ORDER BY n.created_at DESC
+    """, (session['user_id'],))
+    notifications = cur.fetchall()
+    
+    return render_template("notifications.html", notifications=notifications)
+
+@app.route("/handle_notification/<int:notification_id>", methods=["POST"])
+def handle_notification(notification_id):
+    action = request.form.get("action")
+    if action not in ["accept", "reject"]:
+        return redirect(url_for("notifications"))
+
+    try:
+        cur = g.db.cursor(dictionary=True)
+
+        cur.execute("""
+            SELECT n.*, u.email as sender_email
+            FROM notifications n
+            JOIN users u ON n.sender_id = u.id
+            WHERE n.id = ?
+        """, (notification_id,))
+        notification = cur.fetchone()
+
+        if not notification:
+            flash("Notifica non trovata", "error")
+            return redirect(url_for("notifications"))
+
+        new_status = "accepted" if action == "accept" else "rejected"
+        cur.execute("""
+            UPDATE notifications
+            SET status = ?
+            WHERE id = ?
+        """, (new_status, notification_id))
+
+        if action == "accept":
+            if notification['type'] == 'contact_request':
+                cur.execute("""
+                    INSERT INTO connections (user1_id, user2_id)
+                    VALUES (?, ?)
+                """, (notification['receiver_id'], notification['sender_id']))
+
+                send_notification_email(
+                    receiver_email=notification['sender_email'],
+                    message="La tua richiesta di contatto è stata accettata!"
+                )
+
+        g.db.commit()
+        flash(f"Richiesta {new_status} con successo", "success")
+
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore: {str(e)}", "error")
+    
+    return redirect(url_for("notifications"))
+
+def send_notification_email(receiver_email: str, message: str):
+    msg = EmailMessage()
+    msg["Subject"] = "Aggiornamento richiesta - Iu-ventus"
+    msg["From"] = configurazioni['smtp_user']
+    msg["To"] = receiver_email
+
+    html = f"""<!DOCTYPE html>
+    <html>
+    <body>
+        <p>La tua richiesta ha ricevuto un aggiornamento:</p>
+        <p><strong>{message}</strong></p>
+    </body>
+    </html>"""
+    
+    msg.add_alternative(html, subtype="html")
+    
+    try:
+        with smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port']) as server:
+            server.starttls()
+            server.login(configurazioni['smtp_user'], configurazioni['smtp_password'])
+            server.send_message(msg)
+    except Exception as e:
+        print(f"Errore invio email: {str(e)}")
+
+@app.before_request
+def check_notifications():
+    if "user_id" in session:
+        cur = g.db.cursor(dictionary=True)
+        cur.execute("""
+            SELECT COUNT(*) as count
+            FROM notifications
+            WHERE receiver_id = ?
+            AND status='unread'
+        """, (session['user_id'],))
+        result = cur.fetchone()
+        g.unread_count = result['count'] if result else 0
+
+@app.route("/info")
+def info():
+    return render_template("info.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
