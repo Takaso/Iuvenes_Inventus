@@ -211,7 +211,7 @@ def index():
         return render_template("index.html", users_with_scores=users_with_scores)
     except Exception as e:
         flash(f"Error loading data: {str(e)}", "error")
-        return redirect(url_for('signup'))
+        return redirect(url_for("signup"))
 
 # Registrazione
 @app.route("/signup", methods=["GET", "POST"])
@@ -221,6 +221,9 @@ def signup():
             username = request.form.get("username", "").strip()
             if not username:
                 username = None
+            if len(username) > 15:
+                flash("Il nome deve essere di 15 caratteri o di meno", "error")
+                return render_template("signup.html")
             email = request.form["email"]
             validate_email(email, check_deliverability=True)
             password = request.form["password"]
@@ -306,7 +309,12 @@ def profile():
             file = request.files.get("profile_pic")
             username_input = request.form.get('username', '').strip() or None
             update_success = False
-
+            if len(bio) > 1500:
+                flash("Bio cannot exceed 1500 characters", "error")
+                error_occurred = True
+            if username_input and len(username_input) > 15:
+                flash("Username must be 15 characters or less", "error")
+                error_occurred = True
             # Gestione immagine profilo
             pic_filename = None
             if file and allowed_file(file.filename):
