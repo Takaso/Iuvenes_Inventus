@@ -13,6 +13,7 @@ import random
 from email_validator import validate_email, EmailNotValidError
 import time
 from datetime import datetime
+from jinja2 import Environment
 
 app = Flask(__name__)
 # Serve per le sessioni e per cookie persistenti
@@ -147,71 +148,319 @@ def get_or_create_tag(name):
     g.db.commit()
     return cur.lastrowid
 
+def datetimeformat(value, format='%b %d, %Y %H:%M'):
+    return value.strftime(format)
+app.jinja_env.filters['datetimeformat'] = datetimeformat
+
+@app.route("/create_post", methods=["POST"])
+def create_post():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    title = request.form.get("title", "").strip()
+    content = request.form.get("content", "").strip()
+    tags = request.form.get("tags", "").strip()
+    file = request.files.get("image")
+    
+    if not content:
+        flash("I post non possono essere vuoti", "error")
+        return redirect(url_for("index"))
+    
+    try:
+        # Inserisci il post
+        cur = g.db.cursor()
+        cur.execute("""
+            INSERT INTO posts (title, content, user_id, creation_date, image)
+            VALUES (?, ?, ?, ?, ?)
+        """, (title[:100], content, session['user_id'], datetime.now(), None))
+        post_id = cur.lastrowid
+
+        image_filename = None
+        if file and allowed_file(file.filename):
+            image_filename = secure_filename(f"post_{post_id}_{int(time.time())}.png")
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+            
+            img = Image.open(file.stream)
+            img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+            img.save(filepath)
+            
+            cur.execute("UPDATE posts SET image = ? WHERE id = ?", (image_filename, post_id))
+            
+        # Gestisci i tag
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()][:5]
+        for tag in tag_list:
+            tag_id = get_or_create_tag(tag)
+            cur.execute("""
+                INSERT INTO post_tags (post_id, tag_id)
+                VALUES (?, ?)
+            """, (post_id, tag_id))
+        
+        g.db.commit()
+        flash("Post carico con successo!", "success")
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore nella creazione del post: {str(e)}", "error")
+    
+    return redirect(url_for("index"))
+
+@app.route("/delete_post/<int:post_id>", methods=["POST"])
+def delete_post(post_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        cur = g.db.cursor()
+        # Verifica che l'utente sia il proprietario
+        cur.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+        result = cur.fetchone()
+        if result and result[0] == session['user_id']:
+            cur.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+            cur.execute("DELETE FROM post_tags WHERE post_id = ?", (post_id,))
+            g.db.commit()
+            flash("Post eliminato con successo", "success")
+        else:
+            flash("Non sei autorizzato a eliminare questo post", "error")
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore durante l'eliminazione: {str(e)}", "error")
+    
+    return redirect(url_for("index"))
+
+@app.route("/add_comment/<int:post_id>", methods=["POST"])
+def add_comment(post_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    content = request.form.get("content", "").strip()
+    if not content:
+        flash("Il commento non può essere vuoto", "error")
+        return redirect(url_for("index"))
+    
+    try:
+        cur = g.db.cursor()
+        cur.execute("""
+            INSERT INTO comments (post_id, user_id, content)
+            VALUES (?, ?, ?)
+        """, (post_id, session['user_id'], content))
+        g.db.commit()
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore nell'aggiunta del commento: {str(e)}", "error")
+    
+    return redirect(url_for("index"))
+
+@app.route("/delete_comment/<int:comment_id>", methods=["POST"])
+def delete_comment(comment_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        cur = g.db.cursor()
+        # Verifica proprietà commento
+        cur.execute("SELECT user_id FROM comments WHERE id = ?", (comment_id,))
+        result = cur.fetchone()
+        if result and result[0] == session['user_id']:
+            cur.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+            g.db.commit()
+            flash("Commento eliminato", "success")
+        else:
+            flash("Non sei autorizzato", "error")
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore: {str(e)}", "error")
+    
+    return redirect(url_for("index"))
+
 @app.route("/", methods=["GET"])
 def index():
     try:
-        q = request.args.get("q", "").strip().lower()
+        search_type = request.args.get("type", "posts")
         user_id = session.get("user_id")
         user_type = session.get("user_type")
-        
         cur = g.db.cursor(dictionary=True)
 
-        # scegliamo quali colonne prendere in base al tipo
-        if user_id:
-            if user_type == "Student":
-                cur.execute("""
-                    SELECT id, email, user_type, address, phone, Username, bio, profile_pic
-                    FROM users
-                    WHERE user_type='Business'
-                """)
-            elif user_type == "Business":
-                cur.execute("""
-                    SELECT id, email, user_type, cv_file, Username, bio, profile_pic
-                    FROM users
-                    WHERE user_type='Student'
-                """)
-            elif user_type == "Admin":
-                cur.execute("""
-                    SELECT id, email, user_type, address, phone, cv_file, Username, bio, profile_pic
-                    FROM users
-                """)
-            else:
-                cur.execute("""
-                    SELECT id, email, user_type, bio, profile_pic
-                    FROM users
-                """)
+        if search_type == "posts":
+            return handle_post_search(cur, user_id)
+        elif search_type == "users":
+            return handle_user_search(cur, user_type)  # Passa l'user type
         else:
-                cur.execute("""
-                    SELECT id, email, user_type, bio, profile_pic
-                    FROM users
-                """)
+            return handle_default_view(cur, user_id, user_type)
 
-        users = cur.fetchall()
-        users_with_scores = []
-
-        for u in users:
-            uid = u.get('id', 0)
-            email = u.get('email', '')
-            username = u.get('Username', '')
-            cur.execute(
-                "SELECT t.name FROM tags t JOIN user_tags ut ON ut.tag_id = t.id WHERE ut.user_id = ?",
-                (uid,)
-            )
-            tags = [r['name'] for r in cur.fetchall()]
-
-            # calcola score
-            score = 0
-            if q:
-                score = sum(1 for t in tags if q in t.lower())
-
-            u['tags'] = tags
-            users_with_scores.append((u, score))
-
-        users_with_scores.sort(key=lambda x: x[1], reverse=True)
-        return render_template("index.html", users_with_scores=users_with_scores)
     except Exception as e:
-        flash(f"Error loading data: {str(e)}", "error")
-        return redirect(url_for("signup"))
+        flash(f"Errore durante il caricamento: {str(e)}", "error")
+        return redirect(url_for("index"))
+
+def handle_user_search(cur, current_user_type):
+    q = request.args.get("q", "").strip().lower()
+    search_field = request.args.get("search_user_field", "username")
+    users_with_scores = []
+
+    target_type = None
+    if current_user_type == "Student":
+        target_type = "Business"
+    elif current_user_type == "Business":
+        target_type = "Student"
+
+    base_query = """
+        SELECT DISTINCT u.*
+        FROM users u
+        {join_clause}
+        WHERE LOWER({search_field}) LIKE ?
+        {user_type_clause}
+        ORDER BY u.id DESC
+        LIMIT 50
+    """
+
+    if search_field == "username":
+        query = base_query.format(
+            join_clause="",
+            search_field="u.Username",
+            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
+        )
+        params = [f"%{q}%"]
+    else:  # tag search
+        query = base_query.format(
+            join_clause="JOIN user_tags ut ON u.id = ut.user_id JOIN tags t ON ut.tag_id = t.id",
+            search_field="t.name",
+            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
+        )
+        params = [f"%{q}%"]
+
+    cur.execute(query, params)
+    users = cur.fetchall()
+
+    # calcola gli score
+    for user in users:
+        cur.execute("SELECT t.name FROM user_tags ut JOIN tags t ON ut.tag_id = t.id WHERE ut.user_id = ?", (user['id'],))
+        tags = [row['name'].lower() for row in cur.fetchall()]
+        
+        score = 0
+        if q:
+            if search_field == "username":
+                score += 100 if q in user['Username'].lower() else 0
+            score += sum(10 for tag in tags if q in tag)
+        
+        user['tags'] = tags
+        users_with_scores.append((user, min(score, 100)))
+
+    users_with_scores.sort(key=lambda x: x[1], reverse=True)
+    return render_template("index.html", users_with_scores=users_with_scores, search_type="users")
+
+def handle_post_search(cur, user_id):
+    q = request.args.get("q", "").strip().lower()
+    search_field = request.args.get("search_field", "content")
+    posts = []
+
+    # Costruzione query in base al campo di ricerca
+    if search_field in ["content", "title"]:
+        cur.execute(f"""
+            SELECT p.*, u.Username, u.profile_pic, u.user_type
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            WHERE LOWER(p.{search_field}) LIKE ?
+            ORDER BY p.creation_date DESC
+            LIMIT 50
+        """, (f"%{q}%",))
+    else:  # ricerca per tag
+        cur.execute("""
+            SELECT DISTINCT p.*, u.Username, u.profile_pic, u.user_type
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            JOIN post_tags pt ON p.id = pt.post_id
+            JOIN tags t ON pt.tag_id = t.id
+            WHERE LOWER(t.name) LIKE ?
+            ORDER BY p.creation_date DESC
+            LIMIT 50
+        """, (f"%{q}%",))
+
+    posts = cur.fetchall()
+    _add_post_metadata(cur, posts)
+    return render_template("index.html", posts=posts, search_type="posts")
+
+
+def handle_default_view(cur, user_id, user_type):
+    posts = []
+    users_with_scores = []
+
+    # Caricamento post rilevanti
+    if user_id:
+        cur.execute("""
+            SELECT t.name 
+            FROM user_tags ut
+            JOIN tags t ON ut.tag_id = t.id
+            WHERE ut.user_id = ?
+        """, (user_id,))
+        user_tags = [row['name'] for row in cur.fetchall()]
+
+        if user_tags:
+            cur.execute(f"""
+                SELECT DISTINCT p.*, u.Username, u.profile_pic, u.user_type
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                JOIN post_tags pt ON p.id = pt.post_id
+                JOIN tags t ON pt.tag_id = t.id
+                WHERE t.name IN ({','.join(['?']*len(user_tags))})
+                ORDER BY p.creation_date DESC
+                LIMIT 20
+            """, user_tags)
+        else:
+            cur.execute("""
+                SELECT p.*, u.Username, u.profile_pic, u.user_type
+                FROM posts p
+                JOIN users u ON p.user_id = u.id
+                ORDER BY p.creation_date DESC
+                LIMIT 20
+            """)
+        
+        posts = cur.fetchall()
+        _add_post_metadata(cur, posts)
+
+    # Suggerimenti utenti
+    if user_id and user_type:
+        target_type = "Student" if user_type == "Business" else "Business"
+        cur.execute(f"""
+            SELECT *, COALESCE(Username, email) as display_name
+            FROM users
+            WHERE user_type = ?
+            LIMIT 10
+        """, (target_type,))
+        
+        for user in cur.fetchall():
+            cur.execute("""
+                SELECT t.name
+                FROM user_tags ut
+                JOIN tags t ON ut.tag_id = t.id
+                WHERE ut.user_id = ?
+            """, (user['id'],))
+            user['tags'] = [row['name'] for row in cur.fetchall()]
+            users_with_scores.append((user, 0))  # Punteggio non necessario per i suggerimenti
+
+    return render_template("index.html",
+                        posts=posts,
+                        users_with_scores=users_with_scores,
+                        search_type="posts")
+
+def _add_post_metadata(cur, posts):
+    # Aggiunge tag e commenti ai post
+    for post in posts:
+        # Carica tag
+        cur.execute("""
+            SELECT t.name
+            FROM post_tags pt
+            JOIN tags t ON pt.tag_id = t.id
+            WHERE pt.post_id = ?
+        """, (post['id'],))
+        post['tags'] = [row['name'] for row in cur.fetchall()]
+
+        # Carica commenti
+        cur.execute("""
+            SELECT c.*, u.Username, u.profile_pic, u.user_type
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.post_id = ?
+            ORDER BY c.created_at
+        """, (post['id'],))
+        post['comments'] = cur.fetchall()
 
 # Registrazione
 @app.route("/signup", methods=["GET", "POST"])
@@ -221,8 +470,8 @@ def signup():
             username = request.form.get("username", "").strip()
             if not username:
                 username = None
-            if len(username) > 15:
-                flash("Il nome deve essere di 15 caratteri o di meno", "error")
+            if len(username) > 20:
+                flash("Il nome deve essere di 20 caratteri o di meno", "error")
                 return render_template("signup.html")
             email = request.form["email"]
             validate_email(email, check_deliverability=True)
@@ -310,10 +559,10 @@ def profile():
             username_input = request.form.get('username', '').strip() or None
             update_success = False
             if len(bio) > 1500:
-                flash("Bio cannot exceed 1500 characters", "error")
+                flash("La bio non può essere più lunga di 1500 caratteri", "error")
                 error_occurred = True
-            if username_input and len(username_input) > 15:
-                flash("Username must be 15 characters or less", "error")
+            if username_input and len(username_input) > 20:
+                flash("L'username deve essere più corto di 20 caratteri", "error")
                 error_occurred = True
             # Gestione immagine profilo
             pic_filename = None
@@ -595,7 +844,6 @@ def reset_password():
     else:
         flash("owo", "success")
     return render_template("reset_password.html");
-
 
 if __name__ == "__main__":
     app.run(debug=True)
