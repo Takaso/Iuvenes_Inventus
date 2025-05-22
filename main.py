@@ -300,7 +300,7 @@ def handle_user_search(cur, current_user_type):
         target_type = "Business"
     elif current_user_type == "Business":
         target_type = "Student"
-
+    # Ricerca utente unico
     base_query = """
         SELECT DISTINCT u.*
         FROM users u
@@ -311,14 +311,14 @@ def handle_user_search(cur, current_user_type):
         LIMIT 50
     """
 
-    if search_field == "username":
+    if search_field == "username": # Se cerchi per il nome
         query = base_query.format(
             join_clause="",
             search_field="u.Username",
             user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
         )
         params = [f"%{q}%"]
-    else:  # tag search
+    else:  # Se cerchi per il tag formatta la query diversamente
         query = base_query.format(
             join_clause="JOIN user_tags ut ON u.id = ut.user_id JOIN tags t ON ut.tag_id = t.id",
             search_field="t.name",
@@ -329,7 +329,7 @@ def handle_user_search(cur, current_user_type):
     cur.execute(query, params)
     users = cur.fetchall()
 
-    # calcola gli score
+    # Calcola gli score
     for user in users:
         cur.execute("SELECT t.name FROM user_tags ut JOIN tags t ON ut.tag_id = t.id WHERE ut.user_id = ?", (user['id'],))
         tags = [row['name'].lower() for row in cur.fetchall()]
@@ -343,7 +343,7 @@ def handle_user_search(cur, current_user_type):
         user['tags'] = tags
         users_with_scores.append((user, min(score, 100)))
 
-    users_with_scores.sort(key=lambda x: x[1], reverse=True)
+    users_with_scores.sort(key=lambda x: x[1], reverse=True) # Ordina gli user
     return render_template("index.html", users_with_scores=users_with_scores, search_type="users")
 
 def handle_post_search(cur, user_id):
@@ -377,7 +377,6 @@ def handle_post_search(cur, user_id):
     _add_post_metadata(cur, posts)
     return render_template("index.html", posts=posts, search_type="posts")
 
-
 def handle_default_view(cur, user_id, user_type):
     posts = []
     users_with_scores = []
@@ -385,7 +384,7 @@ def handle_default_view(cur, user_id, user_type):
     # Caricamento post rilevanti
     if user_id:
         cur.execute("""
-            SELECT t.name 
+            SELECT t.name
             FROM user_tags ut
             JOIN tags t ON ut.tag_id = t.id
             WHERE ut.user_id = ?
@@ -435,10 +434,7 @@ def handle_default_view(cur, user_id, user_type):
             user['tags'] = [row['name'] for row in cur.fetchall()]
             users_with_scores.append((user, 0))  # Punteggio non necessario per i suggerimenti
 
-    return render_template("index.html",
-                        posts=posts,
-                        users_with_scores=users_with_scores,
-                        search_type="posts")
+    return render_template("index.html", posts=posts, users_with_scores=users_with_scores, search_type="posts")
 
 def _add_post_metadata(cur, posts):
     # Aggiunge tag e commenti ai post
@@ -462,39 +458,71 @@ def _add_post_metadata(cur, posts):
         """, (post['id'],))
         post['comments'] = cur.fetchall()
 
-# Registrazione
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        username = request.form.get("username", "").strip() or None
+        user_type = request.form.get("user_type", "Student")
+
+        error = False
+
+        # Validazione email
         try:
-            username = request.form.get("username", "").strip()
-            if not username:
-                username = None
-            if len(username) > 20:
-                flash("Il nome deve essere di 20 caratteri o di meno", "error")
-                return render_template("signup.html")
-            email = request.form["email"]
             validate_email(email, check_deliverability=True)
-            password = request.form["password"]
-            user_type = request.form.get("user_type", "Student")
-            hashed_password = generate_password_hash(password)
-            conn = connct()
-            if conn:
-                try:
-                    cur = conn.cursor()
+        except EmailNotValidError as e:
+            flash(f"Email non valida: {str(e)}", "error")
+            error = True
+
+        # Validazione username
+        if username and len(username) > 20:
+            flash("L'username non può superare 20 caratteri", "error")
+            error = True
+
+        # Validazione password
+        if len(password) < 8:
+            flash("La password deve contenere almeno 8 caratteri", "error")
+            error = True
+
+        # Validazione user_type
+        if user_type not in ("Student", "Business"):
+            flash("Tipo utente non valido", "error")
+            error = True
+
+        if error:
+            return render_template("signup.html")
+
+        # Controllo email esistente
+        try:
+            with connct() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT id FROM users WHERE email = ?", (email,))
+                    if cur.fetchone():
+                        flash("Email già registrata", "error")
+                        return render_template("signup.html")
+                    
+                    # Inserimento utente
+                    hashed_password = generate_password_hash(password)
                     cur.execute(
-                        "INSERT INTO users (email, password, user_type, Username) VALUES (?, ?, ?, ?)",
+                        """INSERT INTO users
+                        (email, password, user_type, Username)
+                        VALUES (?, ?, ?, ?)""",
                         (email, hashed_password, user_type, username)
                     )
                     conn.commit()
-                    flash("Account creato con successo!", "success");
+                    
+                    flash("Registrazione completata! Accedi con le tue credenziali", "success")
                     return redirect(url_for("login"))
-                except mariadb.Error as e:
-                    flash(f"Errore: {e}", "error")
-                finally:
-                    cur.close(); conn.close()
-        except EmailNotValidError as e:
-            flash(f"Email invalida: {e}", "error")
+
+        except mariadb.Error as e:
+            flash(f"Errore di database: {str(e)}", "error")
+            app.logger.error(f"Signup error: {str(e)}")
+        
+        except Exception as e:
+            flash("Errore imprevisto durante la registrazione", "error")
+            app.logger.error(f"Unexpected signup error: {str(e)}")
+
     return render_template("signup.html")
 
 # Login con "ricordami"
@@ -554,6 +582,10 @@ def profile():
     if request.method == "POST":
         try:
             # Inizializza le variabili
+            linkedin = request.form.get("linkedin", "").strip()
+            github = request.form.get("github", "").strip()
+            website = request.form.get("website", "").strip()
+            youtube = request.form.get("youtube", "").strip()
             bio = request.form.get("bio", "")
             file = request.files.get("profile_pic")
             username_input = request.form.get('username', '').strip() or None
@@ -575,11 +607,19 @@ def profile():
 
             # Aggiornamento dati base
             if pic_filename:
-                cur.execute("UPDATE users SET bio=?, profile_pic=?, Username=? WHERE id=?",
-                        (bio, pic_filename, username_input, user_id))
+                cur.execute("""
+                    UPDATE users
+                    SET bio=?, profile_pic=?, Username=?,
+                    linkedin=?, github=?, website=?, youtube=?
+                    WHERE id=?
+                """, (bio, pic_filename, username_input, linkedin, github, website, youtube, user_id))
             else:
-                cur.execute("UPDATE users SET bio=?, Username=? WHERE id=?",
-                        (bio, username_input, user_id))
+                cur.execute("""
+                    UPDATE users
+                    SET bio=?, Username=?,
+                        linkedin=?, github=?, website=?, youtube=?
+                    WHERE id=?
+                """, (bio, username_input, linkedin, github, website, youtube, user_id))
 
             # Gestione tipologia utente
             if user_type == "Student":
@@ -675,16 +715,21 @@ def profile():
         return redirect(url_for("profile"))
 
     # GET: Caricamento dati
-    cur.execute("SELECT email, user_type, profile_pic, bio, cv_file, address, phone, Username FROM users WHERE id=?", (user_id,))
+    cur.execute("""
+        SELECT email, user_type, profile_pic, bio, cv_file,
+        address, phone, Username, linkedin, github, website, youtube
+        FROM users
+        WHERE id=?
+    """, (user_id,))
     user_data = cur.fetchone()
-    email, user_type, profile_pic, bio, cv_file, address, phone, username = user_data
+    (email, user_type, profile_pic, bio, cv_file, address, phone, username, linkedin, github, website, youtube) = user_data
 
     cur.execute("SELECT t.name FROM tags t JOIN user_tags ut ON ut.tag_id = t.id WHERE ut.user_id = ?", (user_id,))
     user_tags = [row[0] for row in cur.fetchall()]
 
     return render_template(
         "profile.html",
-        username=username,
+        username=username or "",
         email=email,
         user_type=user_type,
         profile_pic=profile_pic,
@@ -692,7 +737,11 @@ def profile():
         cv_file=cv_file,
         address=address,
         phone=phone,
-        user_tags=user_tags
+        user_tags=user_tags,
+        linkedin=linkedin,
+        github=github,
+        website=website,
+        youtube=youtube,
     )
 
 @app.route("/user/<int:user_id>")
@@ -706,7 +755,7 @@ def view_user(user_id):
 
     # Carichiamo i dati di base dell’utente
     cur.execute("""
-        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone, Username
+        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone, Username, linkedin, github, website, youtube
         FROM users
         WHERE id = ?
     """, (user_id,))
@@ -739,7 +788,11 @@ def view_user(user_id):
     return render_template(
         "user_profile.html",
         user=user,
-        tags=tags
+        tags=tags,
+        linkedin=row[9],  # Adjust index based on your select order
+        github=row[10],
+        website=row[11],
+        youtube=row[12]
     )
 
 
@@ -837,13 +890,56 @@ def forgot():
 @app.route("/reset_password", methods=["GET", "POST"])
 def reset_password():
     if "user_id" in session:
-        flash("Sei già registrato, non è necessario resettare password", "error")
+        flash("Sei già loggato", "error")
         return redirect(url_for("index"))
-    if session.get("cambia_password", False):
-        flash("uwu", "error")
-    else:
-        flash("owo", "success")
-    return render_template("reset_password.html");
+    
+    if not session.get("cambia_password"):
+        flash("Richiesta non valida", "error")
+        return redirect(url_for("forgot"))
+
+    email = session.get("forgot_email")
+    if not email:
+        flash("Sessione scaduta", "error")
+        return redirect(url_for("forgot"))
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        if not password or len(password) < 8:
+            flash("La password deve avere almeno 8 caratteri", "error")
+            return redirect(url_for("reset_password"))
+        
+        if password != confirm_password:
+            flash("Le password non coincidono", "error")
+            return redirect(url_for("reset_password"))
+
+        try:
+            cur = g.db.cursor()
+            # Trova l'utente per email
+            cur.execute("SELECT id FROM users WHERE email = ?", (email,))
+            user = cur.fetchone()
+            if not user:
+                flash("Utente non trovato", "error")
+                return redirect(url_for("forgot"))
+            
+            # Aggiorna la password
+            hashed_pw = generate_password_hash(password)
+            cur.execute("UPDATE users SET password = ? WHERE email = ?", (hashed_pw, email))
+            g.db.commit()
+
+            # Pulisci la sessione
+            session.pop("cambia_password", None)
+            session.pop("forgot_email", None)
+            
+            flash("Password reimpostata con successo! Accedi con la nuova password", "success")
+            return redirect(url_for("login"))
+
+        except Exception as e:
+            g.db.rollback()
+            flash(f"Errore durante l'aggiornamento: {str(e)}", "error")
+
+    return render_template("reset_password.html")
 
 @app.route("/send_request/<int:receiver_id>", methods=["POST"])
 def send_request(receiver_id):
@@ -867,6 +963,7 @@ def send_request(receiver_id):
         flash(f"Errore: {str(e)}", "error")
     
     return redirect(url_for("view_user", user_id=receiver_id))
+
 @app.route("/notifications")
 def notifications():
     if "user_id" not in session:
@@ -942,16 +1039,45 @@ def send_notification_email(receiver_email: str, message: str):
     msg["From"] = configurazioni['smtp_user']
     msg["To"] = receiver_email
 
-    html = f"""<!DOCTYPE html>
-    <html>
-    <body>
-        <p>La tua richiesta ha ricevuto un aggiornamento:</p>
-        <p><strong>{message}</strong></p>
-    </body>
-    </html>"""
-    
+    html = f"""\
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <title>Iu-ventus</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background-color:#ffffff; margin: 20px auto; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <tr>
+            <td style="background-color:#1e40af; padding:20px; text-align:center;">
+                <h1 style="color:#ffffff; margin:0; font-size:24px;">Iu-ventus</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding:30px; color:#333333;">
+                <p style="font-size:16px; margin-top:0;">Ciao,</p>
+                <p style="font-size:16px;">
+                    La tua richiesta ha ricevuto un aggiornamento:
+                </p>
+                <div style="margin:30px 0; padding:20px; background-color:#e0e7ff; border-left:6px solid #1e40af; border-radius:4px;">
+                    <strong style="font-size:16px; color:#1e3a8a;">{message}</strong>
+                </div>
+                <p style="font-size:14px; color:#555555;">
+                    Se non ti aspettavi questa email, puoi ignorarla tranquillamente.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color:#f4f4f4; text-align:center; padding:20px; font-size:12px; color:#888888;">
+                © {datetime.now().year} Iu-ventus. Tutti i diritti riservati.
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
     msg.add_alternative(html, subtype="html")
-    
+
     try:
         with smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port']) as server:
             server.starttls()
@@ -976,6 +1102,135 @@ def check_notifications():
 @app.route("/info")
 def info():
     return render_template("info.html")
+
+@app.route("/delete_account", methods=["POST"])
+def delete_account():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    password = request.form.get("password", "")
+    
+    try:
+        cur = g.db.cursor()
+        # Get user data and password hash
+        cur.execute("SELECT password, profile_pic, cv_file FROM users WHERE id = ?", (user_id,))
+        user_data = cur.fetchone()
+        if not user_data:
+            flash("Utente non trovato", "error")
+            return redirect(url_for("profile"))
+        
+        stored_hash, profile_pic, cv_file = user_data
+        
+        # Verify password
+        if not bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+            flash("Password non corretta", "error")
+            return redirect(url_for("profile"))
+
+        # Delete media files
+        def safe_delete(filename):
+            if filename:
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if os.path.exists(path):
+                    os.remove(path)
+        
+        safe_delete(profile_pic)
+        safe_delete(cv_file)
+
+        # Delete post images
+        cur.execute("SELECT image FROM posts WHERE user_id = ?", (user_id,))
+        for row in cur.fetchall():
+            safe_delete(row[0])
+
+        # Delete all user-related data from DB
+        cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        g.db.commit()
+
+        # Logout and clear session
+        session.clear()
+        flash("Account eliminato con successo", "success")
+        return redirect(url_for("login"))
+
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore durante l'eliminazione: {str(e)}", "error")
+        return redirect(url_for("profile"))
+
+# main.py
+@app.route("/admin_delete_user/<int:user_id>", methods=["POST"])
+def admin_delete_user(user_id):
+    if session.get("user_type") != "Admin":
+        flash("Non autorizzato", "error")
+        return redirect(url_for("index"))
+    
+    reason = request.form.get("reason", "")
+    send_email = request.form.get("send_email") == "on"
+
+    try:
+        cur = g.db.cursor()
+        
+        # Recupera i dati dell'utente
+        cur.execute("SELECT email, profile_pic, cv_file FROM users WHERE id = ?", (user_id,))
+        user_data = cur.fetchone()
+        if not user_data:
+            flash("Utente non trovato", "error")
+            return redirect(url_for("view_database"))
+        
+        email, profile_pic, cv_file = user_data
+
+        # Invia email di notifica
+        if send_email and email:
+            msg = EmailMessage()
+            msg["Subject"] = "Account eliminato - Iu-ventus"
+            msg["From"] = configurazioni['smtp_user']
+            msg["To"] = email
+
+            html = f"""<!DOCTYPE html>
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #1f2937; padding: 30px; border-radius: 10px;">
+                    <h2 style="color: #ef4444; font-size: 24px;">Il tuo account è stato eliminato</h2>
+                    <p style="color: #e5e7eb; font-size: 16px; margin-top: 20px;">
+                        Motivo fornito dall'amministratore:<br>
+                        <em style="color: #94a3b8;">{reason or 'Nessun motivo specificato'}</em>
+                    </p>
+                    <p style="color: #e5e7eb; margin-top: 30px;">
+                        Per ulteriori informazioni, contatta il supporto.
+                    </p>
+                </div>
+            </body>
+            </html>"""
+            msg.add_alternative(html, subtype="html")
+
+            try:
+                with smtplib.SMTP(configurazioni['smtp_server'], configurazioni['smtp_port']) as server:
+                    server.starttls()
+                    server.login(configurazioni['smtp_user'], configurazioni['smtp_password'])
+                    server.send_message(msg)
+            except Exception as e:
+                app.logger.error(f"Errore invio email: {str(e)}")
+
+        # Elimina file media
+        def safe_delete(filename):
+            if filename:
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if os.path.exists(path):
+                    os.remove(path)
+        
+        safe_delete(profile_pic)
+        safe_delete(cv_file)
+
+        # Elimina post correlati
+        cur.execute("DELETE FROM posts WHERE user_id = ?", (user_id,))
+        cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        g.db.commit()
+        
+        flash("Account eliminato con successo", "success")
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore durante l'eliminazione: {str(e)}", "error")
+    
+    return redirect(url_for("view_database"))
 
 if __name__ == "__main__":
     app.run(debug=True)
