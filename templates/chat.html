@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-xl p-6">
+        <!-- Messages Container -->
+        <div id="messages" class="h-96 overflow-y-auto mb-6 space-y-4 pr-4">
+            {% for msg in messages %}
+            <div class="{% if msg.sender_id == session.user_id %}text-right{% endif %}">
+                <div class="inline-block max-w-3/4 bg-gray-700 rounded-xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="{{ url_for('uploaded_file', filename=msg.profile_pic) if msg.profile_pic else url_for('static', filename='logo/logo_quadrato.png') }}" 
+                            class="w-8 h-8 rounded-full">
+                        <span class="text-sm text-blue-400">{{ msg.Username }}</span>
+                        <span class="text-xs text-gray-400">{{ msg.sent_at|datetimeformat }}</span>
+                    </div>
+                    <p class="text-gray-100">{{ msg.content }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Message Input -->
+        <form id="messageForm" method="POST" class="flex gap-2">
+            <textarea name="content"
+                    class="flex-1 bg-gray-700 rounded-xl p-4 text-white"
+                    placeholder="Type a message..."
+                    rows="1"
+                    required></textarea>
+            <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl text-white">
+                Send
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Auto-scroll to bottom
+const messagesContainer = document.getElementById('messages');
+messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+// AJAX message submission
+document.getElementById('messageForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    await fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    });
+    
+    e.target.reset();
+    window.location.reload(); // Simple refresh for demo (replace with WebSocket later)
+};
+
+// Periodically check for new messages
+setInterval(async () => {
+    const response = await fetch(window.location.href);
+    const html = await response.text();
+    const parser = new DOMParser();
+    const newDoc = parser.parseFromString(html, 'text/html');
+    const newMessages = newDoc.getElementById('messages').innerHTML;
+    
+    if (newMessages !== document.getElementById('messages').innerHTML) {
+        document.getElementById('messages').innerHTML = newMessages;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}, 3000);
+</script>
+{% endblock %}
