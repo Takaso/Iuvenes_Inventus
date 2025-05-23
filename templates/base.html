@@ -56,6 +56,35 @@
             top: -0.5rem;
             right: -0.25rem;
         }
+        :root {
+            --linkedin: #0A66C2;
+            --github: #181717;
+            --youtube: #FF0000;
+        }
+
+        .text-linkedin { color: var(--linkedin); }
+        .bg-linkedin\/20 { background-color: rgba(var(--linkedin), 0.1); }
+        .hover\:bg-linkedin\/30:hover { background-color: rgba(var(--linkedin), 0.2); }
+
+        .text-github { color: var(--github); }
+        .bg-github\/20 { background-color: rgba(var(--github), 0.1); }
+        .hover\:bg-github\/30:hover { background-color: rgba(var(--github), 0.2); }
+
+        .text-youtube { color: var(--youtube); }
+        .bg-youtube\/20 { background-color: rgba(var(--youtube), 0.1); }
+        .hover\:bg-youtube\/30:hover { background-color: rgba(var(--youtube), 0.2); }
+        @keyframes subtleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .group:hover .group-hover\:animate-float {
+            animation: subtleFloat 2s ease-in-out infinite;
+        }
+
+        .group:hover .group-hover\:text-shadow {
+            text-shadow: 0 2px 8px rgba(var(--brand-color), 0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
