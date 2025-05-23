@@ -527,18 +527,21 @@ def signup():
 
 # Login con "ricordami"
 
+
 MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_BASE_DURATION = 30  # in seconds
+LOCKOUT_BASE_DURATION = 30  # in secondi
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     now = datetime.now()
 
-    # Initialize session values if not set
+    # Inizializza valori di sessione
     if 'login_attempts' not in session:
         session['login_attempts'] = 0
     if 'lockout_multiplier' not in session:
         session['lockout_multiplier'] = 1
+
+    # Controlla se siamo in lockout
     if 'lockout_until' in session:
         lockout_until = datetime.fromisoformat(session['lockout_until'])
         if now < lockout_until:
@@ -546,16 +549,18 @@ def login():
             flash(f"Hai superato il numero massimo di tentativi. Riprova tra {remaining} secondi.", "error")
             return render_template("login.html")
         else:
-            # Lockout expired, reset timer
+            # Expiry del lockout: azzera i tentativi, conserva multiplier
             session.pop('lockout_until', None)
+            session['login_attempts'] = 0
 
     if request.method == "POST":
+        # Dopo expiry, login_attempts è 0 e non entra qui finché non supera di nuovo MAX_LOGIN_ATTEMPTS
         if session['login_attempts'] >= MAX_LOGIN_ATTEMPTS:
-            # Lock user out and increment duration
+            # Imposta nuovo lockout
             lock_duration = LOCKOUT_BASE_DURATION * session['lockout_multiplier']
             session['lockout_until'] = (now + timedelta(seconds=lock_duration)).isoformat()
-            session['lockout_multiplier'] += 1  # Exponential backoff
-            flash(f"Hai superato il numero massimo di tentativi. Account bloccato per {lock_duration} secondi.", "error")
+            session['lockout_multiplier'] += 1
+            flash(f"Hai superato il numero massimo di tentativi. Sessione bloccata per {lock_duration} secondi.", "error")
             return render_template("login.html")
 
         email = request.form.get("email")
@@ -571,9 +576,8 @@ def login():
                 )
                 user = cur.fetchone()
 
-                # Verify credentials
                 if user and bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
-                    # Reset all lockout state on success
+                    # Login riuscito: reset completo dello stato
                     session.pop('login_attempts', None)
                     session.pop('lockout_until', None)
                     session.pop('lockout_multiplier', None)
@@ -582,6 +586,7 @@ def login():
                     session['user_type'] = user[2]
                     return redirect(url_for("profile"))
                 else:
+                    # Fallito: incrementa tentativi
                     session['login_attempts'] += 1
                     remaining = MAX_LOGIN_ATTEMPTS - session['login_attempts']
                     flash(f"Email o password sbagliati. Tentativi rimasti: {remaining}", "error")
@@ -590,6 +595,7 @@ def login():
                 conn.close()
 
     return render_template("login.html")
+
 # Serve per le immagini caricate
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
