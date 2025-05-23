@@ -1,46 +1,161 @@
 {% extends "base.html" %}
 {% block title %}Iu-ventus | View Database{% endblock %}
 {% block content %}
-    <!-- contenuto principale -->
-    <main class="flex-grow flex flex-col items-center justify-center px-4 py-8">
-        <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-            <div class="px-6 py-4 bg-gray-900 border-b border-gray-700">
-                <h1 class="text-2xl font-semibold text-white">View Database</h1>
+    <!-- Modale di conferma -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 max-w-md w-full space-y-4 border border-gray-700 shadow-2xl">
+            <div class="flex items-center gap-3 pb-2 border-b border-gray-700">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <h3 class="text-2xl font-bold text-red-400">Conferma eliminazione</h3>
             </div>
-            <div class="p-6">
-                <table class="min-w-full table-auto text-left">
+            <form id="deleteForm" method="POST" class="space-y-6">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Motivo (opzionale)</label>
+                        <textarea name="reason" rows="3"
+                                class="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-xl text-gray-100
+                                        focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500
+                                        transition-all duration-200"></textarea>
+                    </div>
+                    <!-- Animated Switch -->
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input id="sendEmailToggle" type="checkbox" name="send_email" class="sr-only peer">
+                            <div class="w-12 h-6 bg-gray-700 rounded-full peer-checked:bg-red-600
+                                        peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500
+                                        transition-colors duration-200"></div>
+                            <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full
+                                        peer-checked:translate-x-6 peer-checked:bg-red-500
+                                        transition-transform duration-200"></div>
+                        </div>
+                        <span class="ml-3 text-sm font-medium text-gray-400 peer-checked:text-red-400 transition-colors duration-200">
+                            Invia email di notifica
+                        </span>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="hideModal()"
+                            class="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-gray-300
+                                font-medium flex items-center gap-2 transition-all duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Annulla
+                    </button>
+                    <button type="submit"
+                            class="px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-white
+                                font-medium flex items-center gap-2 transition-all duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Elimina
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main class="flex-grow flex flex-col items-center justify-center px-4 py-8">
+        <div class="w-full max-w-6xl bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl border border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                        </svg>
+                        Gestione Utenti
+                    </h1>
+                    <a href="{{ url_for('profile') }}"
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300
+                                flex items-center gap-2 transition-all duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Torna al profilo
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-x-auto">
+                <table class="w-full min-w-[700px]">
                     <thead>
-                        <tr class="bg-gray-700">
-                            <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">ID</th>
-                            <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">Email</th>
-                            <th class="px-4 py-2 text-gray-300 uppercase tracking-wider">User Type</th>
+                        <tr class="border-b border-gray-700">
+                            <th class="px-4 py-3.5 text-left text-sm font-semibold text-gray-400">ID</th>
+                            <th class="px-4 py-3.5 text-left text-sm font-semibold text-gray-400">Email</th>
+                            <th class="px-4 py-3.5 text-left text-sm font-semibold text-gray-400">Tipo</th>
+                            <th class="px-4 py-3.5 text-right text-sm font-semibold text-gray-400">Azioni</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-gray-700">
                         {% for user in users %}
-                        <tr class="odd:bg-gray-800 even:bg-gray-700 hover:bg-gray-600 transition">
-                            <td class="px-4 py-2 text-gray-100">
-                                <a href="{{ url_for('view_user', user_id=user.id) }}" class="hover:underline text-white">
-                                    {{ user.id }}
-                                </a>
+                        <tr class="hover:bg-gray-800/50 transition-colors duration-200">
+                            <td class="px-4 py-3.5 text-gray-300 font-mono">{{ user.id }}</td>
+                            <td class="px-4 py-3.5 text-gray-300">{{ user.email }}</td>
+                            <td class="px-4 py-3.5">
+                                <span class="px-3 py-1 rounded-full text-sm
+                                    {% if user.user_type == 'Admin' %}bg-purple-600/20 text-purple-400
+                                    {% elif user.user_type == 'Business' %}bg-blue-600/20 text-blue-400
+                                    {% else %}bg-gray-600/20 text-gray-400{% endif %}">
+                                    {{ user.user_type }}
+                                </span>
                             </td>
-                            <td class="px-4 py-2 text-gray-100">
-                                <a href="{{ url_for('view_user', user_id=user.id) }}" class="hover:underline text-white">
-                                    {{ user.email }}
-                                </a>
+                            <td class="px-4 py-3.5 text-right">
+                                <div class="inline-flex space-x-2">
+                                    <button onclick="showModal({{ user.id }})"
+                                            class="px-3.5 py-1.5 bg-red-600/20 hover:bg-red-600/30 rounded-lg
+                                                text-red-400 hover:text-red-300 flex items-center gap-2
+                                                transition-all duration-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                        Elimina
+                                    </button>
+                                    <a href="{{ url_for('view_user', user_id=user.id) }}"
+                                        class="px-3.5 py-1.5 bg-gray-700/20 hover:bg-gray-700/30 rounded-lg
+                                            text-gray-300 hover:text-gray-100 flex items-center gap-2
+                                            transition-all duration-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 15c2.21 0 4.325.562 6.121 1.557M15 11a3 3 0 11-6 0 3 3 0 016 0zM12 3c1.657 0 3 1.343 3 3H9c0-1.657 1.343-3 3-3z"/>
+                                        </svg>
+                                        Account
+                                    </a>
+                                </div>
                             </td>
-                            <td class="px-4 py-2 text-gray-100">{{ user.user_type }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            <div class="px-6 py-4 bg-gray-900 border-t border-gray-700 text-right">
-                <a href="{{ url_for('profile') }}"
-                    class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    Torna indietro
-                </a>
-            </div>
         </div>
     </main>
+
+    <script>
+        function showModal(userId) {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('animate-fade-in');
+            document.getElementById('deleteForm').action = `/admin_delete_user/${userId}`;
+        }
+        function hideModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('animate-fade-out');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('animate-fade-out');
+            }, 200);
+        }
+        document.addEventListener('keydown', (e) => e.key === 'Escape' && hideModal());
+        document.getElementById('confirmModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'confirmModal') hideModal();
+        });
+    </script>
+
+    <style>
+        @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(20px); } }
+        .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        .animate-fade-out { animation: fade-out 0.2s ease-in; }
+    </style>
 {% endblock %}
