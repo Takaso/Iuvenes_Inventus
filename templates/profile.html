@@ -1,208 +1,427 @@
 {% extends "base.html" %}
 {% block title %}Iu-ventus | Profilo{% endblock %}
 {% block content %}
-    <main class="flex-grow flex items-center justify-center px-6 py-12 bg-gray-900">
+<main class="flex-grow flex items-center justify-center px-6 py-12 bg-gray-900">
     <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-4 gap-8">
         <!-- Sidebar / Profile Summary -->
         <aside class="col-span-1 bg-gray-800 rounded-2xl shadow-xl p-6 space-y-6">
-        <!-- Profile Icon -->
-        <div class="flex justify-center">
-            {% if profile_pic %}
-            <img src="{{ url_for('uploaded_file', filename=profile_pic) }}" alt="Profile Pic"
-                class="h-32 w-32 rounded-full object-cover border-4 border-blue-500" />
-            {% else %}
-            <div class="h-32 w-32 rounded-full bg-gray-700 border-4 border-blue-500 flex items-center justify-center">
-            <span class="text-4xl text-gray-400">{{ username and username[0].upper() or '?' }}</span>
-            </div>
-            {% endif %}
-        </div>
-        <!-- Username -->
-        <div class="text-center">
-            <h2 class="text-2xl font-bold text-white truncate" title="{{ username }}">
-            {{ username if username else 'Nessun username' }}
-            </h2>
-            <p class="text-gray-400 text-sm mt-1 truncate" title="{{ email }}">{{ email }}</p>
-        </div>
-        <!-- Account Type -->
-        <div class="text-center">
-            <span class="inline-block px-4 py-1 bg-blue-500 text-white rounded-full text-xs font-medium">
-            {{ user_type }}
-            </span>
-        </div>
-        <!-- Bio -->
-        <div class="bg-gray-700 rounded-lg p-4 text-left max-h-40 overflow-y-auto">
-            <h3 class="text-gray-200 font-semibold mb-2">Bio</h3>
-            <p class="text-gray-300 text-sm {{ not bio and 'italic text-gray-500' or '' }}">
-            {{ bio or 'Nessuna bio impostata' }}
-            </p>
-        </div>
-        <!-- Informazioni -->
-        <div class="bg-gray-700 rounded-lg p-4 text-left">
-            <h3 class="text-gray-200 font-semibold mb-2">Informazioni</h3>
-            <ul class="text-gray-300 text-sm space-y-2">
-                <li class="truncate" title="{{ email }}">
-                    <span class="font-medium text-gray-100">Email:</span> {{ email }}
-                </li>
-                {% if user_type == 'Business' %}
-                <li class="truncate" title="{{ address }}">
-                    <span class="font-medium text-gray-100">Indirizzo:</span> {{ address or 'Non impostato' }}
-                </li>
-                <li>
-                    <span class="font-medium text-gray-100">Telefono:</span> {{ phone or 'Non impostato' }}
-                </li>
-                {% elif user_type == 'Student' %}
-                <li>
-                    <span class="font-medium text-gray-100">CV:</span>
-                    {% if cv_file %}
-                    <a href="{{ url_for('uploaded_file', filename=cv_file) }}" 
-                       class="text-blue-400 hover:underline truncate block">
-                        Scarica CV
-                    </a>
-                    {% else %}
-                    <span class="text-gray-500">Non caricato</span>
-                    {% endif %}
-                </li>
+            <!-- Profile Icon -->
+            <div class="flex justify-center">
+                {% if profile_pic %}
+                <img src="{{ url_for('uploaded_file', filename=profile_pic) }}" alt="Profile Pic"
+                    class="h-32 w-32 rounded-full object-cover border-4 border-blue-500">
+                {% else %}
+                <div class="h-32 w-32 rounded-full bg-gray-700 border-4 border-blue-500 flex items-center justify-center">
+                    <span class="text-4xl text-gray-400">{{ username and username[0].upper() or '?' }}</span>
+                </div>
                 {% endif %}
-            </ul>
-        </div>
-        <!-- Tags -->
-        <div class="bg-gray-700 rounded-lg p-4 text-left">
-            <h3 class="text-gray-200 font-semibold mb-2">Tag</h3>
-            {% if user_tags %}
-            <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-            {% for tag in user_tags %}
-            <span class="px-2 py-1 bg-blue-500 text-white rounded-full text-xs truncate max-w-[120px]" title="{{ tag }}">
-                {{ tag }}
-            </span>
-            {% endfor %}
             </div>
-            {% else %}
-            <p class="text-gray-500 italic text-sm">Nessun tag aggiunto</p>
-            {% endif %}
-        </div>
+
+            <!-- Username -->
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-white truncate" title="{{ username }}">
+                    {{ username if username else 'Nessun username' }}
+                </h2>
+                <p class="text-gray-400 text-sm mt-1 truncate" title="{{ email }}">{{ email }}</p>
+            </div>
+
+            <!-- Account Type -->
+            <div class="text-center">
+                <span class="inline-block px-4 py-1 bg-blue-500 text-white rounded-full text-xs font-medium">
+                    {{ user_type }}
+                </span>
+            </div>
+
+            <!-- Bio -->
+            <div class="bg-gray-700 rounded-lg p-4 text-left max-h-40 overflow-y-auto">
+                <h3 class="text-gray-200 font-semibold mb-2">Bio</h3>
+                <p class="text-gray-300 text-sm {{ not bio and 'italic text-gray-500' or '' }}">
+                    {{ bio or 'Nessuna bio impostata' }}
+                </p>
+            </div>
+
+            <!-- Informazioni -->
+            <div class="bg-gray-700 rounded-lg p-4 text-left">
+                <h3 class="text-gray-200 font-semibold mb-2">Informazioni</h3>
+                <ul class="text-gray-300 text-sm space-y-2">
+                    <li class="truncate" title="{{ email }}">
+                        <span class="font-medium text-gray-100">Email:</span> {{ email }}
+                    </li>
+                    {% if user_type == 'Business' %}
+                    <li class="truncate" title="{{ address }}">
+                        <span class="font-medium text-gray-100">Indirizzo:</span> {{ address or 'Non impostato' }}
+                    </li>
+                    <li>
+                        <span class="font-medium text-gray-100">Telefono:</span> {{ phone or 'Non impostato' }}
+                    </li>
+                    {% elif user_type == 'Student' %}
+                    <li>
+                        <span class="font-medium text-gray-100">CV:</span>
+                        {% if cv_file %}
+                        <a href="{{ url_for('uploaded_file', filename=cv_file) }}" 
+                           class="text-blue-400 hover:underline truncate block">
+                            Scarica CV
+                        </a>
+                        {% else %}
+                        <span class="text-gray-500">Non caricato</span>
+                        {% endif %}
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Tags -->
+            <div class="bg-gray-700 rounded-lg p-4 text-left">
+                <h3 class="text-gray-200 font-semibold mb-2">Tag</h3>
+                {% if user_tags %}
+                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    {% for tag in user_tags %}
+                    <span class="px-2 py-1 bg-blue-500 text-white rounded-full text-xs truncate max-w-[120px]" title="{{ tag }}">
+                        {{ tag }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 italic text-sm">Nessun tag aggiunto</p>
+                {% endif %}
+            </div>
         </aside>
 
         <!-- Edit Form -->
-        <section class="col-span-2 md:col-span-3 bg-gray-800 rounded-2xl shadow-xl p-8">
-        <h1 class="text-3xl font-semibold text-white mb-6">Modifica Profilo</h1>
-        <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Username Input -->
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-200 mb-1">Username</label>
-                <input type="text" id="username" name="username" value="{{ username }}"
-                maxlength="15"
-                class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
-            </div>
-            <!-- Email Update -->
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-200 mb-1">Nuova Email</label>
-                <input type="email" id="email" name="email" placeholder="nuova@email.com"
-                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
-            </div>
-            </div>
+        <section class="col-span-2 md:col-span-3 bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
+            <h1 class="text-3xl font-semibold text-white mb-2">Modifica Profilo</h1>
+            
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Username Input -->
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-200 mb-1">Username</label>
+                        <input type="text" id="username" name="username" value="{{ username }}"
+                            maxlength="15"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate">
+                    </div>
+                    
+                    <!-- Email Update -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-200 mb-1">Nuova Email</label>
+                        <input type="email" id="email" name="email" placeholder="nuova@email.com"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
 
-            <!-- Password Change -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Password Change -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-200 mb-1">Password Attuale</label>
+                        <input type="password" id="current_password" name="current_password"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-200 mb-1">Nuova Password</label>
+                        <input type="password" id="new_password" name="new_password"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Bio Input -->
                 <div>
-                    <label for="current_password" class="block text-sm font-medium text-gray-200 mb-1">Password Attuale</label>
-                    <input type="password" id="current_password" name="current_password"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
+                    <textarea id="bio" name="bio" rows="4"
+                            maxlength="1500"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 max-h-40 overflow-y-auto">{{ bio }}</textarea>
+                    <div class="text-right text-sm mt-1 text-gray-400">
+                        <span id="bio-counter">{{ (bio or '')|length }}</span>/1500
+                    </div>
                 </div>
+
+                <!-- Social Media Links -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-semibold text-gray-200 border-l-4 border-blue-400 pl-3">Link Social</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="linkedin" class="block text-sm font-medium text-gray-300 mb-1">LinkedIn</label>
+                            <input type="url" name="linkedin" placeholder="https://linkedin.com/in/username" 
+                                   value="{{ linkedin or '' }}"
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 placeholder-gray-400">
+                        </div>
+                        
+                        <div>
+                            <label for="github" class="block text-sm font-medium text-gray-300 mb-1">GitHub</label>
+                            <input type="url" name="github" placeholder="https://github.com/username" 
+                                   value="{{ github or '' }}"
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 placeholder-gray-400">
+                        </div>
+                        
+                        <div>
+                            <label for="website" class="block text-sm font-medium text-gray-300 mb-1">Sito Web</label>
+                            <input type="url" name="website" placeholder="https://tuosito.com" 
+                                   value="{{ website or '' }}"
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 placeholder-gray-400">
+                        </div>
+                        
+                        <div>
+                            <label for="youtube" class="block text-sm font-medium text-gray-300 mb-1">YouTube</label>
+                            <input type="url" name="youtube" placeholder="https://youtube.com/@username" 
+                                   value="{{ youtube or '' }}"
+                                   class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100 placeholder-gray-400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File and Contact Inputs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Profile Picture Upload -->
+                    <div class="space-y-4" x-data="imagePreview('{{ profile_pic if profile_pic else '' }}')">
+                        <label class="block text-sm font-medium text-gray-200 mb-2">Foto Profilo</label>
+                        <div class="relative border-2 border-dashed border-blue-500/30 rounded-xl p-4 transition-all hover:border-blue-500/60 group/image-upload">
+                            <input type="file" 
+                                id="profile_pic" 
+                                name="profile_pic" 
+                                accept="image/*"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                @change="file = $event.target.files[0]; preview = URL.createObjectURL(file)">
+                            
+                            <div class="text-center" x-show="!preview">
+                                <svg class="mx-auto h-8 w-8 text-blue-400 group-hover/image-upload:text-blue-300 transition-colors" 
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-300">Trascina o clicca per upload</p>
+                                <p class="text-xs text-gray-400 mt-1">Formati supportati: PNG, JPG, JPEG</p>
+                            </div>
+
+                            <!-- Preview durante l'upload -->
+                            <template x-if="preview">
+                                <div class="mt-2 relative">
+                                    <img :src="preview" class="w-32 h-32 mx-auto rounded-full object-cover border-4 border-blue-500/30 shadow-lg">
+                                    <button type="button" 
+                                            @click="clearPreview()"
+                                            class="absolute top-0 right-0 bg-red-500/90 hover:bg-red-600 rounded-full p-1 shadow-sm transition-all -translate-y-2 -translate-x-2">
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <!-- CV Upload (Student Only) -->
+                    {% if user_type == 'Student' %}
+                    <div class="space-y-4" x-data="{ cvFile: null, cvPreview: '{{ cv_file if cv_file else '' }}' }">
+                        <label class="block text-sm font-medium text-gray-200 mb-2">Curriculum Vitae (PDF)</label>
+                        
+                        <!-- Upload Area -->
+                        <div class="relative border-2 border-dashed border-green-500/30 rounded-xl p-4 transition-all hover:border-green-500/60 group/cv-upload">
+                            <input type="file" 
+                                id="cv_file" 
+                                name="cv_file" 
+                                accept="application/pdf"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                @change="cvFile = $event.target.files[0]; cvPreview = cvFile ? cvFile.name : '{{ cv_file }}'">
+                            
+                            <div class="text-center" x-show="!cvFile && !cvPreview">
+                                <svg class="mx-auto h-8 w-8 text-green-400 group-hover/cv-upload:text-green-300 transition-colors" 
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-300">Trascina o clicca per upload</p>
+                                <p class="text-xs text-gray-400 mt-1">Solo file PDF (max 5MB)</p>
+                            </div>
+
+                            <!-- Preview durante l'upload -->
+                            <template x-if="cvFile || cvPreview">
+                                <div class="mt-2 space-y-2 text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <span class="text-gray-300 text-sm truncate max-w-[200px]" x-text="cvFile ? cvFile.name : '{{ cv_file }}'"></span>
+                                    </div>
+                                    
+                                    <div class="flex justify-center gap-2">
+                                        <template x-if="cvFile">
+                                            <button type="button" 
+                                                    @click="cvFile = null; document.getElementById('cv_file').value = ''"
+                                                    class="text-red-400 hover:text-red-300 text-sm flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                Rimuovi
+                                            </button>
+                                        </template>
+                                        
+                                        <a x-show="!cvFile && cvPreview"
+                                        :href="'/uploads/' + cvPreview"
+                                        target="_blank"
+                                        class="text-green-400 hover:text-green-300 text-sm flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                            </svg>
+                                            Scarica
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user_type == 'Business' %}
+                    <div>
+                        <label for="address" class="block text-sm font-medium text-gray-200 mb-1">Indirizzo Sede</label>
+                        <input type="text" id="address" name="address" value="{{ address }}"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-200 mb-1">Telefono</label>
+                        <input type="text" id="phone" name="phone" value="{{ phone }}"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tags Input -->
                 <div>
-                    <label for="new_password" class="block text-sm font-medium text-gray-200 mb-1">Nuova Password</label>
-                    <input type="password" id="new_password" name="new_password"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <label class="block text-sm font-medium text-gray-200 mb-2">Tag (max 3)</label>
+                    <div id="existing-tags" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
+                        {% for tag in user_tags %}<span class="flex items-center space-x-1 bg-blue-500 text-white rounded-full px-3 py-1 text-sm max-w-[160px] truncate">
+                        <span>{{ tag }}</span>
+                        <button type="button" data-tag="{{ tag }}" class="remove-tag-btn text-white hover:opacity-75 focus:outline-none">&times;</button>
+                        </span>{% endfor %}
+                    </div>
+                    <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3" value="{{ user_tags|join(', ') }}"
+                            class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate">
                 </div>
-            </div>
 
-            <!-- Bio Input -->
-            <div>
-                <label for="bio" class="block text-sm font-medium text-gray-200 mb-1">Bio</label>
-                <textarea id="bio" name="bio" rows="4"
-                        maxlength="1500"
-                        class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 max-h-40 overflow-y-auto">{{ bio }}</textarea>
-                <!-- Lunghezza -->
-                <div class="text-right text-sm mt-1 text-gray-400">
-                    <span id="bio-counter">{{ (bio or '')|length }}</span>/1500
-                </div>
-            </div>
-            <script>
-                document.addEventListener('DOMContentLoaded', () => {
-                    // Contatore caratteri
-                    const bioTextarea = document.getElementById("bio");
-                    const bioCounter = document.getElementById("bio-counter");
-                    function updateBioCounter() {
-                        const currentLength = bioTextarea.value.length;
-                        bioCounter.textContent = currentLength;
-                        // Cambia colore quando il limite è vicino
-                        bioCounter.style.color = currentLength > 1400 ? '#ef4444' : '#9CA3AF';
-                    }
-                    bioTextarea.addEventListener("input", updateBioCounter);
-                    // Inizializza l'evento
-                    updateBioCounter();
-                });
-            </script>
+                <button type="submit"
+                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition">Aggiorna Profilo</button>
+            </form>
 
-            <!-- File and Contact Inputs -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="profile_pic" class="block text-sm font-medium text-gray-200 mb-1">Foto Profilo</label>
-                <input type="file" id="profile_pic" name="profile_pic" accept="image/*"
-                    class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 truncate" />
+            <!-- Delete Account Section -->
+            <div class="pt-6 border-t border-red-700/50">
+                <h3 class="text-xl font-semibold text-red-400 border-l-4 border-red-400 pl-3 mb-4">Elimina Account</h3>
+                <form id="deleteForm" method="POST" action="{{ url_for('delete_account') }}">
+                    <input type="password" name="password"
+                        class="w-full bg-gray-800 rounded-lg p-3 mb-4 text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500"
+                        placeholder="Inserisci la tua password per confermare"
+                        required>
+                    <button type="button" onclick="showDeleteModal()"
+                            class="w-full py-2.5 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-all">
+                        Elimina Definitivamente l'Account
+                    </button>
+                </form>
             </div>
-            {% if user_type == 'Student' %}
-            <div>
-                <label for="cv_file" class="block text-sm font-medium text-gray-200 mb-1">Carica CV (PDF)</label>
-                <input type="file" id="cv_file" name="cv_file" accept="application/pdf"
-                    class="block w-full text-gray-100 bg-gray-700 border border-gray-600 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 truncate" />
-            </div>
-            {% endif %}
-            {% if user_type == 'Business' %}
-            <div>
-                <label for="address" class="block text-sm font-medium text-gray-200 mb-1">Indirizzo Sede</label>
-                <input type="text" id="address" name="address" value="{{ address }}"
-                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
-            </div>
-            <div>
-                <label for="phone" class="block text-sm font-medium text-gray-200 mb-1">Telefono</label>
-                <input type="text" id="phone" name="phone" value="{{ phone }}"
-                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500" />
-            </div>
-            {% endif %}
-            </div>
-
-            <!-- Tags Input -->
-            <div>
-            <label class="block text-sm font-medium text-gray-200 mb-2">Tag (max 3)</label>
-            <div id="existing-tags" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto">
-                {% for tag in user_tags %}<span class="flex items-center space-x-1 bg-blue-500 text-white rounded-full px-3 py-1 text-sm max-w-[160px] truncate">
-                <span>{{ tag }}</span>
-                <button type="button" data-tag="{{ tag }}" class="remove-tag-btn text-white hover:opacity-75 focus:outline-none">&times;</button>
-                </span>{% endfor %}
-            </div>
-            <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3" value="{{ user_tags|join(', ') }}"
-                    class="block w-full px-4 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 truncate" />
-            </div>
-
-            <button type="submit"
-                    class="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition">Aggiorna Profilo</button>
-        </form>
         </section>
     </div>
-    </main>
+    <div id="confirmModal" class="hidden fixed inset-0 w-screen h-screen bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full space-y-4">
+        <h3 class="text-2xl font-bold text-red-400">Conferma Eliminazione</h3>
+        <p class="text-gray-300">Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non può essere annullata!</p>
+        <div class="flex justify-end space-x-3">
+            <button type="button" onclick="hideDeleteModal()"
+                class="px-5 py-2.5 bg-gray-600 hover:bg-gray-700 rounded-lg text-white transition-all">
+                Annulla
+            </button>
+            <button type="button" onclick="confirmDelete()"
+                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-all">
+                Conferma Eliminazione
+            </button>
+        </div>
+    </div>
+</div>
+</main>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const tagsInput = document.getElementById('tags');
-        document.querySelectorAll('.remove-tag-btn').forEach(btn => {
+<div id="confirmModal" class="hidden fixed inset-0 w-screen h-screen bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full space-y-4">
+        <h3 class="text-2xl font-bold text-red-400">Conferma Eliminazione</h3>
+        <p class="text-gray-300">Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non può essere annullata!</p>
+        <div class="flex justify-end space-x-3">
+            <button type="button" onclick="hideDeleteModal()"
+                class="px-5 py-2.5 bg-gray-600 hover:bg-gray-700 rounded-lg text-white transition-all">
+                Annulla
+            </button>
+            <button type="button" onclick="confirmDelete()"
+                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-all">
+                Conferma Eliminazione
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDeleteModal() {
+    const form = document.getElementById('deleteForm');
+    if (form.reportValidity()) {  // Verifica la validità del form
+        document.getElementById('confirmModal').classList.remove('hidden');
+    }
+}
+
+function hideDeleteModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function confirmDelete() {
+    document.getElementById('deleteForm').submit();
+}
+
+// Chiudi modale con ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideDeleteModal();
+});
+
+// Chiudi modale cliccando fuori
+document.getElementById('confirmModal').addEventListener('click', (e) => {
+    if (e.target.id === 'confirmModal') hideDeleteModal();
+});
+
+function imagePreview(initialPreview = null) {
+    return {
+        preview: initialPreview,
+        file: null,
+        initialPreview: initialPreview,
+        
+        clearPreview() {
+            this.preview = this.initialPreview;
+            this.file = null;
+            document.querySelector('#profile_pic').value = '';
+        },
+        
+        // Mostra preview esistente al caricamento della pagina
+        init() {
+            if(this.initialPreview) {
+                this.preview = `/uploads/${this.initialPreview}`;
+            }
+        }
+    }
+}
+
+// Inizializza Alpine.js
+document.addEventListener('alpine:init', () => {
+    Alpine.data('imagePreview', imagePreview);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    const tagsInput = document.getElementById('tags');
+    document.querySelectorAll('.remove-tag-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tag = btn.getAttribute('data-tag');
             btn.parentElement.remove();
             let tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t && t !== tag);
             tagsInput.value = tags.join(', ');
         });
-        });
     });
-    </script>
+
+    // Contatore caratteri bio
+    const bioTextarea = document.getElementById("bio");
+    const bioCounter = document.getElementById("bio-counter");
+    function updateBioCounter() {
+        const currentLength = bioTextarea.value.length;
+        bioCounter.textContent = currentLength;
+        bioCounter.style.color = currentLength > 1400 ? '#ef4444' : '#9CA3AF';
+    }
+    bioTextarea.addEventListener("input", updateBioCounter);
+    updateBioCounter();
+});
+</script>
 {% endblock %}
