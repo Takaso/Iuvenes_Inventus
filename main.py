@@ -1232,5 +1232,64 @@ def admin_delete_user(user_id):
     
     return redirect(url_for("view_database"))
 
+@app.route("/messages")
+def messages():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    cur = g.db.cursor(dictionary=True)
+    # Tutte le connessioni dell'utente
+    cur.execute("""
+        SELECT c.id, u.id as other_user_id, u.Username, u.profile_pic, u.user_type
+        FROM connections c
+        JOIN users u ON (c.user1_id = u.id OR c.user2_id = u.id) AND u.id != %s
+        WHERE c.user1_id = %s OR c.user2_id = %s
+    """, (session['user_id'], session['user_id'], session['user_id']))
+    
+    connections = cur.fetchall()
+    return render_template("messages.html", connections=connections)
+
+@app.route("/messages/<int:connection_id>", methods=["GET", "POST"])
+def view_messages(connection_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    cur = g.db.cursor(dictionary=True)
+    # Verifica che l'user sia nella connessione
+    cur.execute("""
+        SELECT * FROM connections
+        WHERE id = %s AND (user1_id = %s OR user2_id = %s)
+    """, (connection_id, session['user_id'], session['user_id']))
+    
+    if not cur.fetchone():
+        flash("Unauthorized", "error")
+        return redirect(url_for("messages"))
+    
+    # Query per i messaggi
+    cur.execute("""
+        SELECT m.*, u.Username, u.profile_pic
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE connection_id = %s
+        ORDER BY sent_at
+    """, (connection_id,))
+    messages = cur.fetchall()
+    
+    # Invio dei messaggi
+    if request.method == "POST":
+        content = request.form.get("content", "").strip()
+        if content:
+            try:
+                cur.execute("""
+                    INSERT INTO messages (connection_id, sender_id, content)
+                    VALUES (%s, %s, %s)
+                """, (connection_id, session['user_id'], content))
+                g.db.commit()
+            except Exception as e:
+                g.db.rollback()
+                flash(f"Error sending message: {str(e)}", "error")
+    
+    return render_template("chat.html", messages=messages, connection_id=connection_id)
+
 if __name__ == "__main__":
     app.run(debug=True)
