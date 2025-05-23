@@ -86,16 +86,16 @@
                         <input type="hidden" name="type" value="posts">
                         <div class="flex-1 relative">
                             <input type="text"
-                                name="q"
-                                value="{{ request.args.get('q', '') }}" 
+                                name="post_q"
+                                value="{{ request.args.get('post_q', '') }}"
                                 placeholder="Cerca nei post..."
                                 class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                         </div>
-                        <select name="search_field"
+                        <select name="post_search_field"
                             class="px-4 py-2 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                            <option value="content" {% if request.args.get('search_field')=='content' %}selected{% endif %}>Descrizione</option>
-                            <option value="title" {% if request.args.get('search_field')=='title' %}selected{% endif %}>Titolo</option>
-                            <option value="tags" {% if request.args.get('search_field')=='tags' %}selected{% endif %}>Tag</option>
+                            <option value="content" {% if request.args.get('post_search_field')=='content' %}selected{% endif %}>Descrizione</option>
+                            <option value="title" {% if request.args.get('post_search_field')=='title' %}selected{% endif %}>Titolo</option>
+                            <option value="tags" {% if request.args.get('post_search_field')=='tags' %}selected{% endif %}>Tag</option>
                         </select>
                         <button type="submit"
                             class="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-medium transition-all
@@ -286,15 +286,15 @@
                             <input type="hidden" name="type" value="users">
                             <div class="flex-1 relative">
                                 <input type="text"
-                                    name="q"
+                                    name="user_q"
                                     placeholder="Cerca utenti..."
-                                    value="{{ request.args.get('q', '') }}"
+                                    value="{{ request.args.get('user_q', '') }}"
                                     class="w-full px-4 py-3 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                             </div>
-                            <select name="search_user_field"
+                            <select name="user_search_field"
                                 class="px-4 py-2 bg-gray-800 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                                <option value="username" {% if request.args.get('search_user_field')=='username' %}selected{% endif %}>Username</option>
-                                <option value="tags" {% if request.args.get('search_user_field')=='tags' %}selected{% endif %}>Tag</option>
+                                <option value="username" {% if request.args.get('user_search_field')=='username' %}selected{% endif %}>Username</option>
+                                <option value="tags" {% if request.args.get('user_search_field')=='tags' %}selected{% endif %}>Tag</option>
                             </select>
                             <button type="submit"
                                 class="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-medium transition-all 
