@@ -2,22 +2,38 @@
 {% block title %}Messages{% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8">
+    {# Sezione titolo con margine inferiore e stile testo #}
     <h1 class="text-3xl font-bold text-white mb-8">Le tue connessioni</h1>
+    
+    {# Griglia responsive con gap e colonne variabili #}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for conn in connections %}
-        <a href="{{ url_for('view_messages', connection_id=conn.id) }}"
-            class="bg-gray-800 p-6 rounded-xl hover:bg-gray-700 transition">
-            <div class="flex items-center gap-4">
-                <img src="{{ url_for('uploaded_file', filename=conn.profile_pic) if conn.profile_pic else url_for('static', filename='logo/logo_quadrato.png') }}"
-                    class="w-12 h-12 rounded-full border-2 border-blue-500/30">
-                <div>
-                    <h3 class="text-xl font-semibold text-white">{{ conn.Username }}</h3>
-                    <p class="text-gray-400 text-sm">{{ conn.user_type }}</p>
+            {# Card cliccabile per ogni connessione con effetti hover e transizione #}
+            <a href="{{ url_for('view_messages', connection_id=conn.id) }}"
+                class="bg-gray-800 p-6 rounded-xl hover:bg-gray-700 transition
+                    hover:transform hover:scale-[1.02] hover:shadow-lg duration-300">
+                <div class="flex items-center gap-4">
+                    {# Immagine profilo con fallback su logo default #}
+                    <img
+                        src="{{ url_for('uploaded_file', filename=conn.profile_pic) if conn.profile_pic else url_for('static', filename='logo/logo_quadrato.png') }}"
+                        class="w-12 h-12 rounded-full border-2 border-blue-500/30
+                            hover:border-blue-400 transition-colors"
+                        alt="Avatar di {{ conn.Username }}"
+                    >
+                    {# Dettagli utente #}
+                    <div>
+                        <h3 class="text-xl font-semibold text-white hover:text-blue-400 transition-colors">
+                            {{ conn.Username }}
+                        </h3>
+                        <p class="text-gray-400 text-sm mt-1">{{ conn.user_type }}</p>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </a>
         {% else %}
-        <p class="text-gray-400">Nessuna connessione ancora formata</p>
+            {# Messaggio se non ci sono connessioni #}
+            <p class="text-gray-400 col-span-full text-center py-12">
+                Nessuna connessione ancora formata
+            </p>
         {% endfor %}
     </div>
 </div>
