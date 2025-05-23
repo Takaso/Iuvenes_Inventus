@@ -282,7 +282,7 @@ def index():
         if search_type == "posts":
             return handle_post_search(cur, user_id)
         elif search_type == "users":
-            return handle_user_search(cur, user_type)  # Passa l'user type
+            return handle_user_search(cur, user_type)
         else:
             return handle_default_view(cur, user_id, user_type)
 
@@ -290,77 +290,21 @@ def index():
         flash(f"Errore durante il caricamento: {str(e)}", "error")
         return redirect(url_for("index"))
 
-def handle_user_search(cur, current_user_type):
-    q = request.args.get("q", "").strip().lower()
-    search_field = request.args.get("search_user_field", "username")
-    users_with_scores = []
-
-    target_type = None
-    if current_user_type == "Student":
-        target_type = "Business"
-    elif current_user_type == "Business":
-        target_type = "Student"
-    # Ricerca utente unico
-    base_query = """
-        SELECT DISTINCT u.*
-        FROM users u
-        {join_clause}
-        WHERE LOWER({search_field}) LIKE ?
-        {user_type_clause}
-        ORDER BY u.id DESC
-        LIMIT 50
-    """
-
-    if search_field == "username": # Se cerchi per il nome
-        query = base_query.format(
-            join_clause="",
-            search_field="u.Username",
-            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
-        )
-        params = [f"%{q}%"]
-    else:  # Se cerchi per il tag formatta la query diversamente
-        query = base_query.format(
-            join_clause="JOIN user_tags ut ON u.id = ut.user_id JOIN tags t ON ut.tag_id = t.id",
-            search_field="t.name",
-            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
-        )
-        params = [f"%{q}%"]
-
-    cur.execute(query, params)
-    users = cur.fetchall()
-
-    # Calcola gli score
-    for user in users:
-        cur.execute("SELECT t.name FROM user_tags ut JOIN tags t ON ut.tag_id = t.id WHERE ut.user_id = ?", (user['id'],))
-        tags = [row['name'].lower() for row in cur.fetchall()]
-        
-        score = 0
-        if q:
-            if search_field == "username":
-                score += 100 if q in user['Username'].lower() else 0
-            score += sum(10 for tag in tags if q in tag)
-        
-        user['tags'] = tags
-        users_with_scores.append((user, min(score, 100)))
-
-    users_with_scores.sort(key=lambda x: x[1], reverse=True) # Ordina gli user
-    return render_template("index.html", users_with_scores=users_with_scores, search_type="users")
-
 def handle_post_search(cur, user_id):
-    q = request.args.get("q", "").strip().lower()
-    search_field = request.args.get("search_field", "content")
+    post_q = request.args.get("post_q", "").strip().lower()
+    post_search_field = request.args.get("post_search_field", "content")
     posts = []
 
     # Costruzione query in base al campo di ricerca
-    if search_field in ["content", "title"]:
+    if post_search_field in ["content", "title"]:
         cur.execute(f"""
             SELECT p.*, u.Username, u.profile_pic, u.user_type
             FROM posts p
             JOIN users u ON p.user_id = u.id
-            WHERE LOWER(p.{search_field}) LIKE ?
+            WHERE LOWER(p.{post_search_field}) LIKE ?
             ORDER BY p.creation_date DESC
             LIMIT 50
-        """, (f"%{q}%",))
+        """, (f"%{post_q}%",))
     else:  # ricerca per tag
         cur.execute("""
             SELECT DISTINCT p.*, u.Username, u.profile_pic, u.user_type
@@ -371,11 +315,67 @@ def handle_post_search(cur, user_id):
             WHERE LOWER(t.name) LIKE ?
             ORDER BY p.creation_date DESC
             LIMIT 50
-        """, (f"%{q}%",))
+        """, (f"%{post_q}%",))
 
     posts = cur.fetchall()
     _add_post_metadata(cur, posts)
     return render_template("index.html", posts=posts, search_type="posts")
+
+def handle_user_search(cur, current_user_type):
+    user_q = request.args.get("user_q", "").strip().lower()
+    user_search_field = request.args.get("user_search_field", "username")
+    users_with_scores = []
+
+    target_type = None
+    if current_user_type == "Student":
+        target_type = "Business"
+    elif current_user_type == "Business":
+        target_type = "Student"
+
+    base_query = """
+        SELECT DISTINCT u.*
+        FROM users u
+        {join_clause}
+        WHERE LOWER({search_field}) LIKE ?
+        {user_type_clause}
+        ORDER BY u.id DESC
+        LIMIT 50
+    """
+
+    if user_search_field == "username":
+        query = base_query.format(
+            join_clause="",
+            search_field="u.Username",
+            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
+        )
+        params = [f"%{user_q}%"]
+    else:  # Ricerca per tag
+        query = base_query.format(
+            join_clause="JOIN user_tags ut ON u.id = ut.user_id JOIN tags t ON ut.tag_id = t.id",
+            search_field="t.name",
+            user_type_clause=f"AND u.user_type = '{target_type}'" if target_type else ""
+        )
+        params = [f"%{user_q}%"]
+
+    cur.execute(query, params)
+    users = cur.fetchall()
+
+    # Calcola gli score
+    for user in users:
+        cur.execute("SELECT t.name FROM user_tags ut JOIN tags t ON ut.tag_id = t.id WHERE ut.user_id = ?", (user['id'],))
+        tags = [row['name'].lower() for row in cur.fetchall()]
+        
+        score = 0
+        if user_q:
+            if user_search_field == "username":
+                score += 100 if user_q in user['Username'].lower() else 0
+            score += sum(10 for tag in tags if user_q in tag)
+        
+        user['tags'] = tags
+        users_with_scores.append((user, min(score, 100)))
+
+    users_with_scores.sort(key=lambda x: x[1], reverse=True)
+    return render_template("index.html", users_with_scores=users_with_scores, search_type="users")
 
 def handle_default_view(cur, user_id, user_type):
     posts = []
@@ -526,28 +526,55 @@ def signup():
     return render_template("signup.html")
 
 # Login con "ricordami"
+MAX_LOGIN_ATTEMPTS = 5
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    # Initialize attempt counter in session
+    if 'login_attempts' not in session:
+        session['login_attempts'] = 0
+
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        # Check if attempts exceeded
+        if session['login_attempts'] >= MAX_LOGIN_ATTEMPTS:
+            flash(f"Hai superato il numero massimo di tentativi ({MAX_LOGIN_ATTEMPTS}). Riprova più tardi.", "error")
+            return render_template("login.html")
+
+        email = request.form.get("email")
+        password = request.form.get("password")
         remember = request.form.get("remember")
+
         conn = connct()
         if conn:
             try:
                 cur = conn.cursor()
-                cur.execute("SELECT id, password, user_type, profile_pic, bio FROM users WHERE email = ?", (email,))
+                cur.execute(
+                    "SELECT id, password, user_type, profile_pic, bio FROM users WHERE email = ?", (email,)
+                )
                 user = cur.fetchone()
+
+                # Verify credentials
                 if user and bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
+                    # Reset attempt counter on successful login
+                    session.pop('login_attempts', None)
                     session.permanent = bool(remember)
                     session['user_id'] = user[0]
                     session['user_type'] = user[2]
                     return redirect(url_for("profile"))
                 else:
-                    flash("Email o password sbagliati", "error")
+                    # Increment attempt counter on failure
+                    session['login_attempts'] += 1
+                    remaining = MAX_LOGIN_ATTEMPTS - session['login_attempts']
+                    flash(
+                        f"Email o password sbagliati. Tentativi rimasti: {remaining}",
+                        "error"
+                    )
             finally:
-                cur.close(); conn.close()
+                cur.close()
+                conn.close()
+
     return render_template("login.html")
+
 
 # Serve per le immagini caricate
 @app.route("/uploads/<filename>")
