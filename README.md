@@ -26,3 +26,4 @@ A Flask-based social platform connecting students and businesses, it supports po
 - Python 3.9+
 - MariaDB database
 - SMTP server (e.g., Gmail)
+![image](https://github.com/user-attachments/assets/03da5846-3da9-488d-ad39-04ed4dbdf90d)
