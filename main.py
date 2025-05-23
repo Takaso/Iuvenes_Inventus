@@ -526,18 +526,36 @@ def signup():
     return render_template("signup.html")
 
 # Login con "ricordami"
+
 MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_BASE_DURATION = 30  # in seconds
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # Initialize attempt counter in session
+    now = datetime.now()
+
+    # Initialize session values if not set
     if 'login_attempts' not in session:
         session['login_attempts'] = 0
+    if 'lockout_multiplier' not in session:
+        session['lockout_multiplier'] = 1
+    if 'lockout_until' in session:
+        lockout_until = datetime.fromisoformat(session['lockout_until'])
+        if now < lockout_until:
+            remaining = int((lockout_until - now).total_seconds())
+            flash(f"Hai superato il numero massimo di tentativi. Riprova tra {remaining} secondi.", "error")
+            return render_template("login.html")
+        else:
+            # Lockout expired, reset timer
+            session.pop('lockout_until', None)
 
     if request.method == "POST":
-        # Check if attempts exceeded
         if session['login_attempts'] >= MAX_LOGIN_ATTEMPTS:
-            flash(f"Hai superato il numero massimo di tentativi ({MAX_LOGIN_ATTEMPTS}). Riprova più tardi.", "error")
+            # Lock user out and increment duration
+            lock_duration = LOCKOUT_BASE_DURATION * session['lockout_multiplier']
+            session['lockout_until'] = (now + timedelta(seconds=lock_duration)).isoformat()
+            session['lockout_multiplier'] += 1  # Exponential backoff
+            flash(f"Hai superato il numero massimo di tentativi. Account bloccato per {lock_duration} secondi.", "error")
             return render_template("login.html")
 
         email = request.form.get("email")
@@ -555,27 +573,23 @@ def login():
 
                 # Verify credentials
                 if user and bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
-                    # Reset attempt counter on successful login
+                    # Reset all lockout state on success
                     session.pop('login_attempts', None)
+                    session.pop('lockout_until', None)
+                    session.pop('lockout_multiplier', None)
                     session.permanent = bool(remember)
                     session['user_id'] = user[0]
                     session['user_type'] = user[2]
                     return redirect(url_for("profile"))
                 else:
-                    # Increment attempt counter on failure
                     session['login_attempts'] += 1
                     remaining = MAX_LOGIN_ATTEMPTS - session['login_attempts']
-                    flash(
-                        f"Email o password sbagliati. Tentativi rimasti: {remaining}",
-                        "error"
-                    )
+                    flash(f"Email o password sbagliati. Tentativi rimasti: {remaining}", "error")
             finally:
                 cur.close()
                 conn.close()
 
     return render_template("login.html")
-
-
 # Serve per le immagini caricate
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
