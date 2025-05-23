@@ -8,7 +8,11 @@ CREATE TABLE users (
     cv_file VARCHAR(255),
     address VARCHAR(255),
     phone VARCHAR(50),
-    username VARCHAR(255) DEFAULT ''
+    username VARCHAR(255) DEFAULT '',
+    linkedin VARCHAR(255),
+    github VARCHAR(255),
+    website VARCHAR(255),
+    youtube VARCHAR(255);
 );
 
 CREATE TABLE tags (
@@ -57,4 +61,26 @@ CREATE TABLE comments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    receiver_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    type ENUM('contact_request', 'application', 'approval') NOT NULL,
+    message TEXT,
+    status ENUM('unread', 'read', 'accepted', 'rejected') DEFAULT 'unread',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notif_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_notif_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE connections (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user1_id INT NOT NULL,
+    user2_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_conn_user1 FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_conn_user2 FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE
 );
