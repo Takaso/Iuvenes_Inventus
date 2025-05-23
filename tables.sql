@@ -12,7 +12,7 @@ CREATE TABLE users (
     linkedin VARCHAR(255),
     github VARCHAR(255),
     website VARCHAR(255),
-    youtube VARCHAR(255);
+    youtube VARCHAR(255)
 );
 
 CREATE TABLE tags (
@@ -34,7 +34,7 @@ CREATE TABLE posts (
     content TEXT NOT NULL,
     user_id INT NOT NULL,
     creation_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    image VARCHAR(255);
+    image VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
