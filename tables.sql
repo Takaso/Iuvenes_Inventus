@@ -84,3 +84,13 @@ CREATE TABLE connections (
     CONSTRAINT fk_conn_user1 FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_conn_user2 FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    connection_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    content TEXT NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
