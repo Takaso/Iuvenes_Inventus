@@ -1,4 +1,4 @@
-# Iu-ventus — Social Hiring Platform for Students and Businesses
+# Iu-ventus (Iuvenes Inventus) — Social Hiring Platform for Students and Businesses
 
 A Flask-based italian social platform that connects students and businesses, allowing them to create posts, comment, manage profiles, send contact requests, and much more. Designed with three user roles (Student, Business, Admin) and a rich feature set to streamline opportunities and professional networking.
 
