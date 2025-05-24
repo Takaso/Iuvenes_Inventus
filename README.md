@@ -36,6 +36,8 @@ A Flask-based social platform connecting students and businesses, it supports po
 ## Profile page
 
 ![image](https://github.com/user-attachments/assets/1bb046d4-baa4-4ed3-86d4-5149b0fca917)
+![image](https://github.com/user-attachments/assets/d5ccdd3f-ef06-4c34-8cda-c9a2cb20fc2c)
+
 
 ## Homepage
 
