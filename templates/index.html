@@ -129,7 +129,11 @@
                                 </div>
                                 <div>
                                     <div class="flex items-center gap-3">
-                                        <h3 class="font-bold text-white text-lg">{{ post.Username }}</h3>
+                                        <h3 class="font-bold text-white text-lg">
+                                            <a href="{{ url_for('view_user', user_id=post.user_id) }}" class="hover:text-blue-400 transition-colors">
+                                                {{ post.Username }}
+                                            </a>
+                                        </h3>
                                         <span class="text-xs {% if post.user_type=='Admin' %}text-purple-300{% elif post.user_type=='Business' %}text-blue-300{% else %}text-green-300{% endif %} 
                                                 px-2.5 py-1 rounded-full bg-gray-700/40 backdrop-blur-sm flex items-center gap-1.5">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
