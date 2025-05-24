@@ -242,6 +242,15 @@ def add_comment(post_id):
             INSERT INTO comments (post_id, user_id, content)
             VALUES (?, ?, ?)
         """, (post_id, session['user_id'], content))
+        cur.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+        post_owner = cur.fetchone()
+        if post_owner and post_owner[0] != session['user_id']:
+            cur.execute("SELECT Username FROM users WHERE id = ?", (session['user_id'],))
+            username = cur.fetchone()[0] or "Someone"
+            cur.execute("""
+                INSERT INTO notifications (receiver_id, sender_id, type, message)
+                VALUES (?, ?, 'comment', ?)
+            """, (post_owner[0], session['user_id'], f"💬 {username} commented on your post"))
         g.db.commit()
     except Exception as e:
         g.db.rollback()
@@ -511,9 +520,28 @@ def signup():
                         (email, hashed_password, user_type, username)
                     )
                     conn.commit()
+
+                    # Ottieni l'ID del nuovo utente e inizializza la sessione
+                    new_user_id = cur.lastrowid
+                    session['user_id'] = new_user_id
+                    session['user_type'] = user_type
+
+                    # Invia codice di verifica via email
+                    verification_code = email_sender(email, "Iu-ventus | Verifica il tuo account")
+                    cur.execute(
+                        """UPDATE users
+                        SET verification_code = ?, verification_code_expiry = ?
+                        WHERE id = ?""",
+                        (
+                            verification_code,
+                            datetime.now() + timedelta(minutes=30),
+                            new_user_id
+                        )
+                    )
+                    conn.commit()
                     
-                    flash("Registrazione completata! Accedi con le tue credenziali", "success")
-                    return redirect(url_for("login"))
+                    flash("Registrazione completata! Verifica la tua email.", "success")
+                    return redirect(url_for("verify_account"))
 
         except mariadb.Error as e:
             flash(f"Errore di database: {str(e)}", "error")
@@ -525,8 +553,100 @@ def signup():
 
     return render_template("signup.html")
 
-# Login con "ricordami"
+@app.route("/verify", methods=["GET", "POST"])
+def verify_account():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
 
+    if request.method == "POST":
+        code = request.form.get("code", "").strip()
+        cur = g.db.cursor()
+        cur.execute("""
+            SELECT verification_code, verification_code_expiry, user_type
+            FROM users
+            WHERE id = ?
+        """, (session['user_id'],))
+        user = cur.fetchone()
+
+        if user and code == user[0] and datetime.now() < user[1]:
+            cur.execute("""
+                UPDATE users
+                SET verified = TRUE,
+                    verification_code = NULL,
+                    verification_code_expiry = NULL
+                WHERE id = ?
+            """, (session['user_id'],))
+            g.db.commit()
+            if user[2] == "Student":
+                cur.execute("""
+                INSERT INTO notifications (receiver_id, sender_id, type, message)
+                VALUES (?, ?, 'system', ?)
+            """, (session['user_id'], session['user_id'], "Benvenuto su Iu-ventus! Inizia a connetterti con le aziende"))
+                g.db.commit()
+            elif user[2] == "Business":
+                return redirect(url_for("request_business_verification"))
+            return redirect(url_for("profile"))
+        else:
+            flash("Codice non valido o scaduto", "error")
+    
+    return render_template("verify.html")
+
+@app.route("/resend_code")
+def resend_code():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    try:
+        cur = g.db.cursor()
+        # Get user email
+        cur.execute("SELECT email, user_type FROM users WHERE id = ?", (session['user_id'],))
+        user = cur.fetchone()
+        
+        if user:
+            # Generate new verification code
+            new_code = email_sender(user[0], "Iu-ventus | Nuovo codice di verifica")
+            cur.execute("""
+                UPDATE users
+                SET verification_code = ?,
+                    verification_code_expiry = ?
+                WHERE id = ?
+            """, (
+                new_code,
+                datetime.now() + timedelta(minutes=30),
+                session['user_id']
+            ))
+            g.db.commit()
+            flash("Nuovo codice inviato con successo!", "success")
+        return redirect(url_for("verify_account"))
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore: {str(e)}", "error")
+        return redirect(url_for("verify_account"))
+
+@app.route("/request_business_verification", methods=["GET", "POST"])
+def request_business_verification():
+    if "user_id" not in session or session.get("user_type") != "Business":
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        details = request.form.get("details", "").strip()
+        if not details:
+            flash("Inserisci i dettagli della tua azienda", "error")
+            return redirect(url_for("request_business_verification"))
+
+        try:
+            cur = g.db.cursor()
+            cur.execute("""
+                INSERT INTO verification_requests (user_id, details)
+                VALUES (?, ?)
+            """, (session['user_id'], details))
+            g.db.commit()
+            flash("Richiesta inviata. Attendi la verifica dell'amministratore.", "success")
+        except Exception as e:
+            g.db.rollback()
+            flash(f"Errore: {str(e)}", "error")
+    
+    return render_template("business_verification.html")
 
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_BASE_DURATION = 30  # in secondi
@@ -595,6 +715,54 @@ def login():
                 conn.close()
 
     return render_template("login.html")
+
+@app.route("/admin/verifications")
+def admin_verifications():
+    if session.get("user_type") != "Admin":
+        return redirect(url_for("index"))
+
+    cur = g.db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT vr.*, u.email, u.Username
+        FROM verification_requests vr
+        JOIN users u ON vr.user_id = u.id
+        WHERE vr.status = 'pending'
+    """)
+    requests = cur.fetchall()
+    
+    return render_template("admin_verifications.html", requests=requests)
+
+@app.route("/handle_verification/<int:request_id>", methods=["POST"])
+def handle_verification(request_id):
+    if session.get("user_type") != "Admin":
+        return redirect(url_for("index"))
+
+    action = request.form.get("action")
+
+    try:
+        cur = g.db.cursor()
+        
+        if action == "approve":
+            cur.execute("SELECT user_id FROM verification_requests WHERE id = ?", (request_id,))
+            result = cur.fetchone()
+            if result:
+                user_id = result[0]
+                cur.execute("UPDATE users SET business_verified = TRUE WHERE id = ?", (user_id,))
+                cur.execute("""
+                    INSERT INTO notifications (receiver_id, sender_id, type, message)
+                    VALUES (?, ?, 'business_verified', ?)
+                """, (user_id, session['user_id'], "La verifica del tuo account è stata approvata! Ora sei un azienda ufficiale"))
+        status = "approved" if action == "approve" else "rejected"
+        
+        cur.execute("UPDATE verification_requests SET status = ? WHERE id = ?", (status, request_id))
+        g.db.commit()
+        flash("Richiesta: %s" % status, "success")
+
+    except Exception as e:
+        g.db.rollback()
+        flash(f"Errore: {str(e)}", "error")
+
+    return redirect(url_for("admin_verifications"))
 
 # Serve per le immagini caricate
 @app.route("/uploads/<filename>")
@@ -802,7 +970,7 @@ def view_user(user_id):
 
     # Carichiamo i dati di base dell’utente
     cur.execute("""
-        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone, Username, linkedin, github, website, youtube
+        SELECT id, email, user_type, profile_pic, bio, cv_file, address, phone, Username, linkedin, github, website, youtube, verified, business_verified
         FROM users
         WHERE id = ?
     """, (user_id,))
@@ -839,7 +1007,9 @@ def view_user(user_id):
         linkedin=row[9],  # Adjust index based on your select order
         github=row[10],
         website=row[11],
-        youtube=row[12]
+        youtube=row[12],
+        verified=row[13],
+        business_verified=row[14]
     )
 
 
@@ -1023,7 +1193,7 @@ def notifications():
             u.profile_pic as sender_pic,
             u.user_type as user_type
         FROM notifications n
-        JOIN users u ON n.sender_id = u.id
+        LEFT JOIN users u ON n.sender_id = u.id
         WHERE n.receiver_id = ?
         ORDER BY n.created_at DESC
     """, (session['user_id'],))
@@ -1304,7 +1474,7 @@ def view_messages(connection_id):
     cur = g.db.cursor(dictionary=True)
     # Verifica che l'user sia nella connessione
     cur.execute("""
-        SELECT * FROM connections
+        SELECT DISTINCT * FROM connections
         WHERE id = %s AND (user1_id = %s OR user2_id = %s)
     """, (connection_id, session['user_id'], session['user_id']))
     
