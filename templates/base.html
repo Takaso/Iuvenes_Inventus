@@ -85,6 +85,61 @@
         .group:hover .group-hover\:text-shadow {
             text-shadow: 0 2px 8px rgba(var(--brand-color), 0.3);
         }
+
+        .prose {
+            max-width: 75ch;
+        }
+
+        /* Logo animation */
+        .logo-hover {
+            transition: transform 0.3s ease;
+        }
+
+        .logo-hover:hover {
+            transform: rotate(-5deg) scale(1.05);
+        }
+
+        /* Navigation links hover effect */
+        .nav-link {
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        .message-glow {
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
+        }
+        @keyframes subtle-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .send-btn:hover svg {
+            animation: subtle-pulse 1.5s ease-in-out infinite;
+        }
+        
+        /* Effetto parallasse messaggi */
+        .message-card {
+            transform: translateZ(0);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .message-card:hover {
+            transform: translateY(-2px) translateZ(10px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
@@ -129,12 +184,15 @@
                     {% if session.get('user_id') %}
                         <!-- Admin Dashboard -->
                         {% if session.get('user_type') == 'Admin' %}
+                        <a href="{{ url_for('admin_verifications') }}"
+                            class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                            Verifiche
+                        </a>
                         <a href="{{ url_for('view_database') }}"
                             class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             Database
                         </a>
                         {% endif %}
-
                         <!-- Profile -->
                         <a href="{{ url_for('profile') }}"
                             class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
