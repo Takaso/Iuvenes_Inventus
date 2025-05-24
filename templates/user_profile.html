@@ -23,11 +23,31 @@
             <!-- Profile Picture Section -->
             {% if user.profile_pic %}
             <div class="flex justify-center group">
-                <img src="{{ url_for('uploaded_file', filename=user.profile_pic) }}" alt="Profile Pic" 
+                <img src="{{ url_for('uploaded_file', filename=user.profile_pic) }}" alt="Profile Pic"
                     class="h-40 w-40 rounded-full object-cover border-4 border-gray-700 shadow-xl
                         transition-transform duration-300 hover:scale-105" />
             </div>
             {% endif %}
+
+            <div class="absolute top-4 right-4 z-20">
+                {% if user.user_type == 'Student' and verified %}
+                <div class="flex items-center space-x-1.5 bg-gradient-to-br from-green-400 to-blue-500 text-white px-3 py-1.5 rounded-full 
+                            shadow-lg hover:shadow-xl transition-shadow duration-300 group">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="text-sm font-medium tracking-tight">Studente Verificato</span>
+                </div>
+                {% elif user.user_type == 'Business' and business_verified %}
+                <div class="flex items-center space-x-1.5 bg-gradient-to-br from-blue-400 to-purple-500 text-white px-3 py-1.5 rounded-full 
+                            shadow-lg hover:shadow-xl transition-shadow duration-300 group">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm font-medium tracking-tight">Azienda Certificata</span>
+                </div>
+                {% endif %}
+            </div>
 
             <!-- Student CV Section -->
             {% if user.user_type == 'Student' and user.cv_file %}
