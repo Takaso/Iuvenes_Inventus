@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Verifiche Aziende | Iu-ventus{% endblock %}
+{% block content %}
+<main class="flex-grow flex items-center justify-center px-4 py-8 bg-gray-900">
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
+        <h1 class="text-3xl font-bold text-white border-l-4 border-blue-500 pl-4">Verifiche Aziende in Attesa</h1>
+
+        <div class="space-y-6">
+            {% if not requests %}
+            <div class="bg-gray-700/30 p-6 rounded-xl text-center">
+                <p class="text-gray-400 italic">Nessuna richiesta di verifica in attesa</p>
+            </div>
+            {% endif %}
+
+            {% for request in requests %}
+            <div class="bg-gray-700/30 rounded-xl p-6 shadow-lg">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <p class="text-sm text-gray-400">Utente</p>
+                        <p class="text-white truncate">{{ request.Username or request.email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Data Richiesta</p>
+                        <p class="text-white">{{ request.created_at|datetimeformat }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">ID Richiesta</p>
+                        <p class="text-blue-400 font-mono">#{{ request.id }}</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-2">Dettagli della Richiesta:</p>
+                    <div class="bg-gray-600/20 p-4 rounded-lg">
+                        <p class="text-gray-300 whitespace-pre-wrap">{{ request.details }}</p>
+                    </div>
+                </div>
+
+            <div class="flex gap-4 justify-end border-t border-gray-600 pt-4">
+                <!-- Form per Rifiutare -->
+                <form method="POST" action="{{ url_for('handle_verification', request_id=request.id) }}">
+                    <input type="hidden" name="action" value="reject">
+                    <button type="submit" 
+                            class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white transition-all
+                                flex items-center gap-2">
+                        <svg class="w-5 h-5">...</svg>
+                        Rifiuta
+                    </button>
+                </form>
+
+                <!-- Form per Approvare -->
+                <form method="POST" action="{{ url_for('handle_verification', request_id=request.id) }}">
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" 
+                            class="px-6 py-2 bg-blue-60a0 hover:bg-blue-700 rounded-lg text-white transition-all
+                                flex items-center gap-2">
+                        <svg class="w-5 h-5">...</svg>
+                        Approva
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center pt-4 border-t border-gray-700">
+            <a href="{{ url_for('view_database') }}"
+                class="text-blue-400 hover:text-blue-300 inline-flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                Vai al Database
+            </a>
+        </div>
+    </div>
+</main>
+{% endblock %}
