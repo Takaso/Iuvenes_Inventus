@@ -258,7 +258,7 @@ Visit `http://localhost:5000` in your browser
 2. Create a feature branch (`git checkout -b feature/YourFeature`)
 3. Commit your changes (`git commit -m "Add YourFeature"`)
 4. Push to branch (`git push origin feature/YourFeature`)
-5. Open a Pull Request — ensure tests pass and code is linted
+5. Open a Pull Request
 
 ---
 
