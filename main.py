@@ -1241,10 +1241,25 @@ def handle_notification(notification_id):
 
         if action == "accept":
             if notification['type'] == 'contact_request':
+                # Controlla se esiste già una connessione
                 cur.execute("""
-                    INSERT INTO connections (user1_id, user2_id)
-                    VALUES (?, ?)
-                """, (notification['receiver_id'], notification['sender_id']))
+                    SELECT id 
+                    FROM connections 
+                    WHERE (user1_id = ? AND user2_id = ?)
+                    OR (user1_id = ? AND user2_id = ?)
+                """, (
+                    notification['receiver_id'], 
+                    notification['sender_id'],
+                    notification['sender_id'],
+                    notification['receiver_id']
+                ))
+                
+                if not cur.fetchone():
+                    # Inserisci solo se non esiste già
+                    cur.execute("""
+                        INSERT INTO connections (user1_id, user2_id)
+                        VALUES (?, ?)
+                    """, (notification['receiver_id'], notification['sender_id']))
 
                 send_notification_email(
                     receiver_email=notification['sender_email'],
