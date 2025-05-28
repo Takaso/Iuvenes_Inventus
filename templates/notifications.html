@@ -67,7 +67,7 @@
                         <p class="text-gray-300 whitespace-pre-wrap">{{ notif.message }}</p>
                     </div>
 
-                    {% if notif.type in ['contact_request', 'application'] and notif.status == 'unread' %}
+                    {% if notif.type in ['contact_request', 'application'] and notif.status in ['unread', 'read'] %}
                     <form method="POST" action="{{ url_for('handle_notification', notification_id=notif.id) }}" class="flex gap-3">
                         <button name="action" value="accept"
                                 class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm
