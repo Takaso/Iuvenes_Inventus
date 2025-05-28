@@ -1243,23 +1243,27 @@ def handle_notification(notification_id):
             if notification['type'] == 'contact_request':
                 # Controlla se esiste già una connessione
                 cur.execute("""
-                    SELECT id 
-                    FROM connections 
+                    SELECT id
+                    FROM connections
                     WHERE (user1_id = ? AND user2_id = ?)
                     OR (user1_id = ? AND user2_id = ?)
                 """, (
-                    notification['receiver_id'], 
+                    notification['receiver_id'],
                     notification['sender_id'],
                     notification['sender_id'],
                     notification['receiver_id']
                 ))
                 
                 if not cur.fetchone():
-                    # Inserisci solo se non esiste già
+                    # Inserisci solo se non esiste già, ed evitiamo duplicati riordinado
+                    user1 = min(notification['receiver_id'], notification['sender_id'])
+                    user2 = max(notification['receiver_id'], notification['sender_id'])
+        
                     cur.execute("""
                         INSERT INTO connections (user1_id, user2_id)
                         VALUES (?, ?)
-                    """, (notification['receiver_id'], notification['sender_id']))
+                        ON DUPLICATE KEY UPDATE user1_id=user1_id
+                    """, (user1, user2))
 
                 send_notification_email(
                     receiver_email=notification['sender_email'],
