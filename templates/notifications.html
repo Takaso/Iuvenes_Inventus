@@ -67,38 +67,40 @@
                         <p class="text-gray-300 whitespace-pre-wrap">{{ notif.message }}</p>
                     </div>
 
-                    {% if notif.type in ['contact_request', 'application'] %}
-                    <div class="flex flex-wrap gap-3 items-center">
-                        <form method="POST" action="{{ url_for('handle_notification', notification_id=notif.id) }}" class="flex gap-3">
-                            <button name="action" value="accept"
-                                    class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm
-                                        flex items-center gap-2 transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                Accetta
-                            </button>
-                            <button name="action" value="reject"
-                                    class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm
-                                        flex items-center gap-2 transition-all">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                                Rifiuta
-                            </button>
-                        </form>
-                        {% if notif.status == 'unread' %}
-                        <span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                            Nuova
-                        </span>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                        {% if notif.status == 'unread' %}
-                        <span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                            Nuova
-                        </span>
-                        {% endif %}
+                    {% if notif.type in ['contact_request', 'application'] and notif.status == 'unread' %}
+                    <form method="POST" action="{{ url_for('handle_notification', notification_id=notif.id) }}" class="flex gap-3">
+                        <button name="action" value="accept"
+                                class="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm
+                                    flex items-center gap-2 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Accetta
+                        </button>
+                        <button name="action" value="reject"
+                                class="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm
+                                    flex items-center gap-2 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Rifiuta
+                        </button>
+                    </form>
+                    {% endif %}
+            
+                    <!-- Badge per stato della notifica -->
+                    {% if notif.status == 'accepted' %}
+                    <span class="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                        Accettata
+                    </span>
+                    {% elif notif.status == 'rejected' %}
+                    <span class="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">
+                        Rifiutata
+                    </span>
+                    {% elif notif.status == 'unread' %}
+                    <span class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                        Nuova
+                    </span>
                     {% endif %}
                 </div>
             </div>
