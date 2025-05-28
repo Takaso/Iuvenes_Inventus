@@ -1187,6 +1187,16 @@ def notifications():
         return redirect(url_for("login"))
     
     cur = g.db.cursor(dictionary=True)
+    
+    # Aggiorna tutte le notifiche non lette a "read"
+    cur.execute("""
+        UPDATE notifications
+        SET status = 'read'
+        WHERE receiver_id = %s AND status = 'unread'
+    """, (session['user_id'],))
+    g.db.commit()
+    
+    # Recupera le notifiche aggiornate
     cur.execute("""
         SELECT n.*,
             u.Username as sender_name,
@@ -1194,7 +1204,7 @@ def notifications():
             u.user_type as user_type
         FROM notifications n
         LEFT JOIN users u ON n.sender_id = u.id
-        WHERE n.receiver_id = ?
+        WHERE n.receiver_id = %s
         ORDER BY n.created_at DESC
     """, (session['user_id'],))
     notifications = cur.fetchall()
@@ -1344,7 +1354,7 @@ def delete_account():
             flash("Password non corretta", "error")
             return redirect(url_for("profile"))
 
-        # Delete media files
+        # Cancella i media
         def safe_delete(filename):
             if filename:
                 path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -1354,16 +1364,16 @@ def delete_account():
         safe_delete(profile_pic)
         safe_delete(cv_file)
 
-        # Delete post images
+        # Cancella i post
         cur.execute("SELECT image FROM posts WHERE user_id = ?", (user_id,))
         for row in cur.fetchall():
             safe_delete(row[0])
 
-        # Delete all user-related data from DB
+        # Cancella l'utente
         cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
         g.db.commit()
 
-        # Logout and clear session
+        # Logout
         session.clear()
         flash("Account eliminato con successo", "success")
         return redirect(url_for("login"))
